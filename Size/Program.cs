@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace Size
@@ -53,9 +54,10 @@ namespace Size
         private static void SetSize(string[] args)
         {
             var title = args[0];
+            var regex = new Regex(title, RegexOptions.Compiled);
 
             var targetProcess = Process.GetProcesses()
-                .Where(p => p.MainWindowHandle.ToInt64() > 0 && p.MainWindowTitle.Contains(title))
+                .Where(p => p.MainWindowHandle.ToInt64() > 0 && regex.IsMatch(p.MainWindowTitle))
                 .FirstOrDefault();
 
             if (targetProcess == null)
