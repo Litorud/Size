@@ -29,7 +29,13 @@ namespace Size
                 case 5:
                     SetSize(args);
                     break;
+                default:
+                    ShowHelp();
+                    break;
             }
+#if DEBUG
+            Console.ReadLine();
+#endif
         }
 
         private static void ShowSizes()
@@ -71,6 +77,25 @@ namespace Size
             int width = int.Parse(args[3]);
             int height = int.Parse(args[4]);
             MoveWindow(targetProcess.MainWindowHandle, x, y, width, height, 1);
+        }
+
+        private static void ShowHelp()
+        {
+            Console.WriteLine(@"Size
+
+指定したタイトルを持つウィンドウを、指定した位置とサイズに変更します。
+
+構文
+    Size.exe <title> <x> <y> <width> <height>
+
+    title : 正規表現で指定します。これに該当するタイトルを持つウィンドウが変更対象です。
+    x     : 変更後のウィンドウ左上の X 座標。
+    y     : 変更後のウィンドウ左上の Y 座標。
+    width : 変更後のウィンドウの幅。
+    height: 変更後のウィンドウの高さ。
+
+注意
+    変更するウィンドウは最初に該当した1つだけです。");
         }
 
         [StructLayout(LayoutKind.Sequential)]
