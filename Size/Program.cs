@@ -6,6 +6,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using System.Windows;
 
 namespace Size
 {
@@ -40,6 +41,16 @@ namespace Size
 
         private static void ShowSizes()
         {
+            /* 参考:
+             * https://dobon.net/vb/dotnet/system/displaysize.html
+             * https://mseeeen.msen.jp/get-screen-bounds-with-multiple-monitors-in-wpf/
+             * http://sliceof-it.blogspot.com/2012/02/systemparameters-screen-resolutions-wpf.html
+             **/
+            Console.WriteLine($"(PrimaryScreen): {SystemParameters.PrimaryScreenWidth}×{SystemParameters.PrimaryScreenHeight}");
+            Console.WriteLine($"(VirtualScreen): {SystemParameters.VirtualScreenLeft}, {SystemParameters.VirtualScreenTop}, {SystemParameters.VirtualScreenWidth}, {SystemParameters.VirtualScreenHeight}");
+            var workArea = SystemParameters.WorkArea;
+            Console.WriteLine($"(WorkArea): {workArea.X}, {workArea.X}, {workArea.Width}, {workArea.Height}");
+
             var targetProcesses = Process.GetProcesses()
                 .Where(p => p.MainWindowHandle.ToInt64() > 0 && !string.IsNullOrEmpty(p.MainWindowTitle));
 
