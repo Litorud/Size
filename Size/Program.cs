@@ -7,6 +7,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Shell;
 
 namespace Size
 {
@@ -18,6 +19,7 @@ namespace Size
         [DllImport("user32.dll")]
         private static extern int MoveWindow(IntPtr hWnd, int x, int y, int nWidth, int nHeight, int bRepaint);
 
+        [STAThread]
         static void Main(string[] args)
         {
             Debug.WriteLine("起動しました。");
@@ -88,6 +90,40 @@ namespace Size
             int width = int.Parse(args[3]);
             int height = int.Parse(args[4]);
             MoveWindow(targetProcess.MainWindowHandle, x, y, width, height, 1);
+
+            UpdateJumpList(args);
+        }
+
+        private static void UpdateJumpList(string[] args)
+        {
+            var arguments = string.Join(
+                " ",
+                args.Select(a => ContainsWhiteSpace(a) ? "\"" + a.Replace("\"", "\\\"") + "\"" : a));
+
+            var jumpTask = new JumpTask
+            {
+                Title = arguments,
+                Arguments = arguments,
+            };
+            var jumpItems = new JumpItem[]
+            {
+                jumpTask
+            };
+            var jumpList = new JumpList(jumpItems, false, false);
+            jumpList.Apply();
+        }
+
+        private static bool ContainsWhiteSpace(string s)
+        {
+            for (int i = 0; i < s.Length; i++)
+            {
+                if (char.IsWhiteSpace(s, i))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private static void ShowHelp()
