@@ -11,7 +11,7 @@ using System.Windows.Shell;
 
 namespace Size
 {
-    class Program
+    class Program : Application
     {
         [DllImport("user32.dll")]
         private static extern int GetWindowRect(IntPtr hWnd, out RECT lpRECT);
@@ -24,7 +24,16 @@ namespace Size
         {
             Debug.WriteLine("起動しました。");
 
-            switch (args.Length)
+            new Program().Execute(args);
+
+#if DEBUG
+            Console.ReadLine();
+#endif
+        }
+
+        private void Execute(IList<string> args)
+        {
+            switch (args.Count)
             {
                 case 0:
                     ShowSizes();
@@ -36,12 +45,9 @@ namespace Size
                     ShowHelp();
                     break;
             }
-#if DEBUG
-            Console.ReadLine();
-#endif
         }
 
-        private static void ShowSizes()
+        private void ShowSizes()
         {
             /* 参考:
              * https://dobon.net/vb/dotnet/system/displaysize.html
@@ -70,7 +76,7 @@ namespace Size
             }
         }
 
-        private static void SetSize(string[] args)
+        private void SetSize(IList<string> args)
         {
             var title = args[0];
             var regex = new Regex(title, RegexOptions.Compiled);
@@ -94,26 +100,24 @@ namespace Size
             UpdateJumpList(args);
         }
 
-        private static void UpdateJumpList(string[] args)
+        private void UpdateJumpList(IList<string> args)
         {
             var arguments = string.Join(
                 " ",
                 args.Select(a => ContainsWhiteSpace(a) ? "\"" + a.Replace("\"", "\\\"") + "\"" : a));
 
+            // ジャンプリストに登録
+            // 参考: http://www.atmarkit.co.jp/ait/articles/1509/09/news025.html
             var jumpTask = new JumpTask
             {
                 Title = arguments,
                 Arguments = arguments,
             };
-            var jumpItems = new JumpItem[]
-            {
-                jumpTask
-            };
-            var jumpList = new JumpList(jumpItems, false, false);
-            jumpList.Apply();
+
+            JumpList.AddToRecentCategory(jumpTask);
         }
 
-        private static bool ContainsWhiteSpace(string s)
+        private bool ContainsWhiteSpace(string s)
         {
             for (int i = 0; i < s.Length; i++)
             {
@@ -126,7 +130,7 @@ namespace Size
             return false;
         }
 
-        private static void ShowHelp()
+        private void ShowHelp()
         {
             Console.WriteLine(@"Size
 
