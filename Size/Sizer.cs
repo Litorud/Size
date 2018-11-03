@@ -1,4 +1,5 @@
-﻿using System;
+﻿using McMaster.Extensions.CommandLineUtils;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -44,11 +45,9 @@ namespace Size
             UpdateJumpList(args);
         }
 
-        private void UpdateJumpList(IList<string> args)
+        private void UpdateJumpList(IEnumerable<string> args)
         {
-            var arguments = string.Join(
-                " ",
-                args.Select(a => ContainsWhiteSpace(a) ? "\"" + a.Replace("\"", "\\\"") + "\"" : a));
+            var arguments = ArgumentEscaper.EscapeAndConcatenate(args);
 
             // ジャンプリストに登録
             // 参考: http://www.atmarkit.co.jp/ait/articles/1509/09/news025.html
@@ -59,19 +58,6 @@ namespace Size
             };
 
             JumpList.AddToRecentCategory(jumpTask);
-        }
-
-        private bool ContainsWhiteSpace(string s)
-        {
-            for (int i = 0; i < s.Length; i++)
-            {
-                if (char.IsWhiteSpace(s, i))
-                {
-                    return true;
-                }
-            }
-
-            return false;
         }
     }
 }
