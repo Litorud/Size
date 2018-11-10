@@ -6,7 +6,7 @@
         <JumpList ShowRecentCategory="True" ShowFrequentCategory="True">
             <JumpTask
                 Title="PowerShell ウィンドウを開く"
-                ApplicationPath="PowerShell.exe"
+                ApplicationPath="powershell.exe"
                 Arguments="{x:Static local:Program.PowerShellArguments}"/>
         </JumpList>
     </JumpList.JumpList>
