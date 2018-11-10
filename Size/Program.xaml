@@ -1,0 +1,11 @@
+﻿<Application x:Class="Size.Program"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" 
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <JumpList.JumpList>
+        <JumpList ShowRecentCategory="True" ShowFrequentCategory="True">
+            <JumpTask
+                Title="PowerShell ウィンドウを開く"
+                ApplicationPath="PowerShell.exe"/>
+        </JumpList>
+    </JumpList.JumpList>
+</Application>

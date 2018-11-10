@@ -11,12 +11,21 @@ using System.Windows.Shell;
 
 namespace Size
 {
-    class Program
+    public partial class Program : Application
     {
         [DllImport("user32.dll")]
         private static extern int GetWindowRect(IntPtr hWnd, out RECT lpRECT);
 
-        static void Main(string[] args)
+        protected override void OnStartup(StartupEventArgs e)
+        {
+            base.OnStartup(e);
+
+            ProgramMain(e.Args);
+
+            Shutdown();
+        }
+
+        void ProgramMain(string[] args)
         {
             Debug.WriteLine("起動しました。");
 

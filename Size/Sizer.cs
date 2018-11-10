@@ -16,7 +16,7 @@ namespace Size
     /// このクラスが Application を継承しているのは、ジャンプリストを使用するため。
     /// JumpList.AddToRecentCategory() は、
     /// </remarks>
-    class Sizer : Application
+    class Sizer
     {
         [DllImport("user32.dll")]
         private static extern int MoveWindow(IntPtr hWnd, int x, int y, int nWidth, int nHeight, int bRepaint);
