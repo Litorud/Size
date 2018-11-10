@@ -18,32 +18,21 @@ namespace Size
 
         protected override void OnStartup(StartupEventArgs e)
         {
-            base.OnStartup(e);
-
-            ProgramMain(e.Args);
-
-            Shutdown();
-        }
-
-        void ProgramMain(string[] args)
-        {
-            Debug.WriteLine("起動しました。");
-
-            switch (args.Length)
+            switch (e.Args.Length)
             {
                 case 0:
                     ShowSizes();
                     break;
                 case 5:
-                    new Sizer().SetSize(args);
+                    new Sizer().SetSize(e.Args);
                     break;
                 default:
                     ShowHelp();
                     break;
             }
 
-#if DEBUG
-            Console.ReadLine();
+#if !DEBUG
+            Shutdown();
 #endif
         }
 
@@ -74,8 +63,7 @@ namespace Size
 
             foreach (var process in targetProcesses)
             {
-                RECT rect;
-                GetWindowRect(process.MainWindowHandle, out rect);
+                GetWindowRect(process.MainWindowHandle, out var rect);
 
                 WriteBounds(
                     process.MainWindowTitle,

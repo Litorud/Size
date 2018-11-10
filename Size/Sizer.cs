@@ -12,10 +12,6 @@ using System.Windows.Shell;
 
 namespace Size
 {
-    /// <remarks>
-    /// このクラスが Application を継承しているのは、ジャンプリストを使用するため。
-    /// JumpList.AddToRecentCategory() は、
-    /// </remarks>
     class Sizer
     {
         [DllImport("user32.dll")]
@@ -49,15 +45,11 @@ namespace Size
         {
             var arguments = ArgumentEscaper.EscapeAndConcatenate(args);
 
-            // ジャンプリストに登録
-            // 参考: http://www.atmarkit.co.jp/ait/articles/1509/09/news025.html
-            var jumpTask = new JumpTask
+            JumpList.AddToRecentCategory(new JumpTask
             {
                 Title = arguments,
-                Arguments = arguments,
-            };
-
-            JumpList.AddToRecentCategory(jumpTask);
+                Arguments = arguments
+            });
         }
     }
 }
