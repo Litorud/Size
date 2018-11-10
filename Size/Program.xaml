@@ -7,7 +7,7 @@
             <JumpTask
                 Title="PowerShell ウィンドウを開く"
                 ApplicationPath="PowerShell.exe"
-                Arguments="{x:Static local:Program.baseDirectory}"/>
+                Arguments="{x:Static local:Program.PowerShellArguments}"/>
         </JumpList>
     </JumpList.JumpList>
 </Application>
