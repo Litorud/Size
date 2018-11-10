@@ -13,6 +13,8 @@ namespace Size
 {
     public partial class Program : Application
     {
+        public readonly static string baseDirectory = $"-noexit -Command Set-Location {AppDomain.CurrentDomain.BaseDirectory}";
+
         [DllImport("user32.dll")]
         private static extern int GetWindowRect(IntPtr hWnd, out RECT lpRECT);
 
