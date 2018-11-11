@@ -22,6 +22,8 @@ namespace Size
 
         public static string PowerShellArguments { get; } = $"-noexit -Command Set-Location '{AppDomain.CurrentDomain.BaseDirectory}'";
 
+        private static Encoding encoding = Encoding.GetEncoding(932);
+
         protected override void OnStartup(StartupEventArgs e)
         {
             var commandLineApplication = new CommandLineApplication(false)
@@ -29,7 +31,7 @@ namespace Size
                 OptionsComparison = StringComparison.CurrentCultureIgnoreCase
             };
 
-            var titleArgument = commandLineApplication.Argument("title", "この文字列を含むタイトルを持つウィンドウが変更対象です。");
+            var titleArgument = commandLineApplication.Argument("title", "この文字列を含むタイトルのウィンドウが変更対象です。");
 
             var isRegexOption = commandLineApplication.Option("-r|--regex", "title を正規表現として解釈します。", CommandOptionType.NoValue);
 
@@ -202,7 +204,19 @@ namespace Size
 
         private static void WriteBounds(string title, double x, double y, double width, double height)
         {
-            Console.WriteLine($"{title}: ({x}, {y}) {width}×{height}");
+            var byteCount = encoding.GetByteCount(title);
+
+            foreach (var limit in new[] { 28, 56 })
+            {
+                if (byteCount <= limit)
+                {
+                    var padding = new string(' ', limit - byteCount);
+                    Console.WriteLine($"{title}{padding} {x,5} {y,5} {width,5} {height,5}");
+                    return;
+                }
+            }
+
+            Console.WriteLine($"{title} {x} {y} {width} {height}");
         }
 
         [StructLayout(LayoutKind.Sequential)]
