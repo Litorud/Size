@@ -58,7 +58,7 @@ namespace Size
 
                 if (showsListOption.HasValue())
                 {
-                    ShowSizes();
+                    ShowList();
                     何もしてない = false;
                 }
 
@@ -66,7 +66,7 @@ namespace Size
                 {
                     ShowHelp();
                     Console.WriteLine();
-                    ShowSizes();
+                    ShowList();
                 }
             });
 
@@ -86,9 +86,15 @@ namespace Size
                 return;
             }
 
-            (int x, int y, int width, int height) = GetArguments(remainingArguments, targetProcess.MainWindowHandle);
-
-            MoveWindow(targetProcess.MainWindowHandle, x, y, width, height, 1);
+            try
+            {
+                (int x, int y, int width, int height) = GetArguments(remainingArguments, targetProcess.MainWindowHandle);
+                MoveWindow(targetProcess.MainWindowHandle, x, y, width, height, 1);
+            }
+            catch (FormatException)
+            {
+                Console.WriteLine("位置またはサイズの値が正しくありません。");
+            }
         }
 
         private Process GetTargetProcess(string title, bool isRegex)
@@ -164,7 +170,7 @@ namespace Size
     オプションは x より前に指定する必要があります。");
         }
 
-        private static void ShowSizes()
+        private static void ShowList()
         {
             /* 参考:
              * https://dobon.net/vb/dotnet/system/displaysize.html
