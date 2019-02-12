@@ -78,9 +78,9 @@ namespace Size
 
         public void SetSize(string title, IList<string> remainingArguments, bool isRegex)
         {
-            var targetProcess = GetTargetProcess(title, isRegex);
+            var targetProcesses = GetTargetProcesses(title, isRegex);
 
-            if (targetProcess == null)
+            if (!targetProcesses.Any())
             {
                 Console.WriteLine("対象ウィンドウが見つかりません。");
                 return;
@@ -88,8 +88,12 @@ namespace Size
 
             try
             {
-                (int x, int y, int width, int height) = GetArguments(remainingArguments, targetProcess.MainWindowHandle);
-                MoveWindow(targetProcess.MainWindowHandle, x, y, width, height, 1);
+                var argumentsGenerator = GetArgumentsGenerator(remainingArguments);
+                foreach (Process process in targetProcesses)
+                {
+                    (int x, int y, int width, int height) = argumentsGenerator(process.MainWindowHandle);
+                    MoveWindow(process.MainWindowHandle, x, y, width, height, 1);
+                }
             }
             catch (FormatException)
             {
@@ -97,39 +101,61 @@ namespace Size
             }
         }
 
-        private Process GetTargetProcess(string title, bool isRegex)
+        private IEnumerable<Process> GetTargetProcesses(string title, bool isRegex)
         {
             var processes = Process.GetProcesses().Where(p => p.MainWindowHandle.ToInt64() > 0);
 
             if (isRegex)
             {
                 var regex = new Regex(title, RegexOptions.Compiled);
-                return processes.FirstOrDefault(p => regex.IsMatch(p.MainWindowTitle));
+                return processes.Where(p => regex.IsMatch(p.MainWindowTitle));
             }
             else
             {
-                return processes.FirstOrDefault(p => p.MainWindowTitle.IndexOf(title, StringComparison.CurrentCultureIgnoreCase) >= 0);
+                return processes.Where(p => p.MainWindowTitle.IndexOf(title, StringComparison.CurrentCultureIgnoreCase) >= 0);
             }
         }
 
-        private (int x, int y, int width, int height) GetArguments(IList<string> args, IntPtr handle)
+        private Func<IntPtr, (int, int, int, int)> GetArgumentsGenerator(IList<string> args)
         {
             switch (args.Count)
             {
                 case 0:
-                    GetWindowRect(handle, out var rect0);
-                    return (rect0.Left, rect0.Top, rect0.Right - rect0.Left, rect0.Bottom - rect0.Top);
+                    return (handle) =>
+                    {
+                        GetWindowRect(handle, out var rect);
+                        return (rect.Left, rect.Top, rect.Right - rect.Left, rect.Bottom - rect.Top);
+                    };
                 case 1:
-                    GetWindowRect(handle, out var rect1);
-                    return (int.Parse(args[0]), rect1.Top, rect1.Right - rect1.Left, rect1.Bottom - rect1.Top);
+                    int x1 = int.Parse(args[0]);
+                    return (handle) =>
+                    {
+                        GetWindowRect(handle, out var rect);
+                        return (x1, rect.Top, rect.Right - rect.Left, rect.Bottom - rect.Top);
+                    };
                 case 2:
-                    GetWindowRect(handle, out var rect2);
-                    return (int.Parse(args[0]), int.Parse(args[1]), rect2.Right - rect2.Left, rect2.Bottom - rect2.Top);
+                    int x2 = int.Parse(args[0]);
+                    int y2 = int.Parse(args[1]);
+                    return (handle) =>
+                    {
+                        GetWindowRect(handle, out var rect);
+                        return (x2, y2, rect.Right - rect.Left, rect.Bottom - rect.Top);
+                    };
                 case 3:
-                    GetWindowRect(handle, out var rect3);
-                    return (int.Parse(args[0]), int.Parse(args[1]), int.Parse(args[2]), rect3.Bottom - rect3.Top);
+                    int x3 = int.Parse(args[0]);
+                    int y3 = int.Parse(args[1]);
+                    int w3 = int.Parse(args[2]);
+                    return (handle) =>
+                    {
+                        GetWindowRect(handle, out var rect);
+                        return (x3, y3, w3, rect.Bottom - rect.Top);
+                    };
                 default:
-                    return (int.Parse(args[0]), int.Parse(args[1]), int.Parse(args[2]), int.Parse(args[3]));
+                    int x4 = int.Parse(args[0]);
+                    int y4 = int.Parse(args[1]);
+                    int w4 = int.Parse(args[2]);
+                    int h4 = int.Parse(args[3]);
+                    return (handle) => (x4, y4, w4, h4);
             }
         }
 
@@ -166,7 +192,6 @@ namespace Size
     -h    : このヘルプを表示します。
 
 注意
-    変更するウィンドウは最初に該当した1つだけです。
     オプションは x より前に指定する必要があります。");
         }
 
