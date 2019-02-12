@@ -78,7 +78,16 @@ namespace Size
 
         public void SetSize(string title, IList<string> remainingArguments, bool isRegex)
         {
-            var targetProcesses = GetTargetProcesses(title, isRegex);
+            IEnumerable<Process> targetProcesses;
+            try
+            {
+                targetProcesses = GetTargetProcesses(title, isRegex);
+            }
+            catch (ArgumentException)
+            {
+                Console.WriteLine("正規表現が正しくありません。");
+                return;
+            }
 
             if (!targetProcesses.Any())
             {
@@ -86,18 +95,21 @@ namespace Size
                 return;
             }
 
+            Func<IntPtr, (int, int, int, int)> argumentsGenerator;
             try
             {
-                var argumentsGenerator = GetArgumentsGenerator(remainingArguments);
-                foreach (Process process in targetProcesses)
-                {
-                    (int x, int y, int width, int height) = argumentsGenerator(process.MainWindowHandle);
-                    MoveWindow(process.MainWindowHandle, x, y, width, height, 1);
-                }
+                argumentsGenerator = GetArgumentsGenerator(remainingArguments);
             }
             catch (FormatException)
             {
                 Console.WriteLine("位置またはサイズの値が正しくありません。");
+                return;
+            }
+
+            foreach (Process process in targetProcesses)
+            {
+                (int x, int y, int width, int height) = argumentsGenerator(process.MainWindowHandle);
+                MoveWindow(process.MainWindowHandle, x, y, width, height, 1);
             }
         }
 
