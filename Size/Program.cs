@@ -14,6 +14,11 @@ namespace Size
     public partial class Program : Application
     {
         delegate void WindowPlacementFieldSetter(ref int left, ref int top, ref int right, ref int bottom);
+        delegate void WindowStateSetter(ref uint showCmd);
+
+        const int SW_MAXIMIZE = 3;
+        const int SW_MINIMIZE = 6;
+        const int SW_RESTORE = 9;
 
         [DllImport("user32.dll")]
         private static extern int GetWindowRect(IntPtr hWnd, out RECT lpRECT);
@@ -36,11 +41,11 @@ namespace Size
             };
 
             var titleArgument = commandLineApplication.Argument("title", "この文字列を含むタイトルのウィンドウが変更対象です。");
-
             var isRegexOption = commandLineApplication.Option("-r|--regex", "title を正規表現として解釈します。", CommandOptionType.NoValue);
-
+            var maximizeOption = commandLineApplication.Option("-x|--max", "ウィンドウを最大化します。", CommandOptionType.NoValue);
+            var minimizeOption = commandLineApplication.Option("-n|--min", "ウィンドウを最小化します。", CommandOptionType.NoValue);
+            var restoreOption = commandLineApplication.Option("-s|--restore", "最大化/最小化状態のウィンドウを元のサイズに戻します。", CommandOptionType.NoValue);
             var showsHelpOption = commandLineApplication.Option("-h|--help|-?", "ヘルプを表示します。", CommandOptionType.NoValue);
-
             var showsListOption = commandLineApplication.Option("-l|--list", "ウィンドウの一覧を出力します。", CommandOptionType.NoValue);
 
             commandLineApplication.OnExecute(() =>
@@ -49,7 +54,7 @@ namespace Size
 
                 if (!string.IsNullOrEmpty(titleArgument.Value))
                 {
-                    SetSize(titleArgument.Value, commandLineApplication.RemainingArguments, isRegexOption.HasValue());
+                    SetSize(titleArgument.Value, commandLineApplication.RemainingArguments, isRegexOption.HasValue(), maximizeOption.HasValue(), minimizeOption.HasValue(), restoreOption.HasValue());
                     UpdateJumpList(e.Args);
                     何もしてない = false;
                 }
@@ -80,7 +85,7 @@ namespace Size
 #endif
         }
 
-        public void SetSize(string title, IList<string> remainingArguments, bool isRegex)
+        public void SetSize(string title, IList<string> remainingArguments, bool isRegex, bool maximize, bool minimize, bool restore)
         {
             IEnumerable<Process> targetProcesses;
             try
@@ -110,6 +115,8 @@ namespace Size
                 return;
             }
 
+            WindowStateSetter setWindowState = GetWindowStateSetter(maximize, minimize, restore);
+
             int windowPlacementLength = Marshal.SizeOf(typeof(WINDOWPLACEMENT));
             foreach (Process process in targetProcesses)
             {
@@ -121,6 +128,7 @@ namespace Size
                 GetWindowPlacement(process.MainWindowHandle, out wp);
 
                 setWindowPlacementField(ref wp.rcNormalPosition.left, ref wp.rcNormalPosition.top, ref wp.rcNormalPosition.right, ref wp.rcNormalPosition.bottom);
+                setWindowState(ref wp.showCmd);
 
                 SetWindowPlacement(process.MainWindowHandle, ref wp);
             }
@@ -192,6 +200,35 @@ namespace Size
                 right = r;
                 bottom = b;
             };
+        }
+
+        private WindowStateSetter GetWindowStateSetter(bool maximize, bool minimize, bool restore)
+        {
+            if (minimize)
+            {
+                return (ref uint showCmd) =>
+                {
+                    showCmd = SW_MINIMIZE;
+                };
+            }
+            else if (maximize)
+            {
+                return (ref uint showCmd) =>
+                {
+                    showCmd = SW_MAXIMIZE;
+                };
+            }
+            else if (restore)
+            {
+                return (ref uint showCmd) =>
+                {
+                    showCmd = SW_RESTORE;
+                };
+            }
+            else
+            {
+                return (ref uint showCmd) => { };
+            }
         }
 
         private void UpdateJumpList(IEnumerable<string> args)
