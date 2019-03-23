@@ -13,21 +13,11 @@ namespace Size
 {
     public partial class Program : Application
     {
-        delegate void WindowPlacementFieldSetter(ref int left, ref int top, ref int right, ref int bottom);
-        delegate void WindowStateSetter(ref uint showCmd);
-
-        const int SW_MAXIMIZE = 3;
-        const int SW_MINIMIZE = 6;
-        const int SW_RESTORE = 9;
-
         [DllImport("user32.dll")]
         private static extern int GetWindowRect(IntPtr hWnd, out RECT lpRECT);
 
-        [DllImport("user32.dll", CharSet = CharSet.Auto)]
-        static extern bool GetWindowPlacement(IntPtr hWnd, out WINDOWPLACEMENT lpwndpl);
-
-        [DllImport("user32.dll", CharSet = CharSet.Auto)]
-        static extern bool SetWindowPlacement(IntPtr hWnd, [In]ref WINDOWPLACEMENT lpwndpl);
+        [DllImport("user32.dll")]
+        private static extern int MoveWindow(IntPtr hWnd, int x, int y, int nWidth, int nHeight, int bRepaint);
 
         public static string PowerShellArguments { get; } = $"-noexit -Command Set-Location '{AppDomain.CurrentDomain.BaseDirectory}'";
 
@@ -42,9 +32,7 @@ namespace Size
 
             var titleArgument = commandLineApplication.Argument("title", "この文字列を含むタイトルのウィンドウが変更対象です。");
             var isRegexOption = commandLineApplication.Option("-r|--regex", "title を正規表現として解釈します。", CommandOptionType.NoValue);
-            var maximizeOption = commandLineApplication.Option("-x|--max", "ウィンドウを最大化します。", CommandOptionType.NoValue);
-            var minimizeOption = commandLineApplication.Option("-n|--min", "ウィンドウを最小化します。", CommandOptionType.NoValue);
-            var restoreOption = commandLineApplication.Option("-s|--restore", "最大化/最小化状態のウィンドウを元のサイズに戻します。", CommandOptionType.NoValue);
+            var adjustOption = commandLineApplication.Option("-a|--adjust", "ウィンドウがスクリーン内に収まるように調整します。", CommandOptionType.NoValue);
             var showsHelpOption = commandLineApplication.Option("-h|--help|-?", "ヘルプを表示します。", CommandOptionType.NoValue);
             var showsListOption = commandLineApplication.Option("-l|--list", "ウィンドウの一覧を出力します。", CommandOptionType.NoValue);
 
@@ -54,7 +42,7 @@ namespace Size
 
                 if (!string.IsNullOrEmpty(titleArgument.Value))
                 {
-                    SetSize(titleArgument.Value, commandLineApplication.RemainingArguments, isRegexOption.HasValue(), maximizeOption.HasValue(), minimizeOption.HasValue(), restoreOption.HasValue());
+                    SetSize(titleArgument.Value, commandLineApplication.RemainingArguments, isRegexOption.HasValue(), adjustOption.HasValue());
                     UpdateJumpList(e.Args);
                     何もしてない = false;
                 }
@@ -85,7 +73,7 @@ namespace Size
 #endif
         }
 
-        public void SetSize(string title, IList<string> remainingArguments, bool isRegex, bool maximize, bool minimize, bool restore)
+        public void SetSize(string title, IList<string> remainingArguments, bool isRegex, bool adjust)
         {
             IEnumerable<Process> targetProcesses;
             try
@@ -104,10 +92,10 @@ namespace Size
                 return;
             }
 
-            WindowPlacementFieldSetter setWindowPlacementField;
+            Func<IntPtr, (int, int, int, int)> getBounds;
             try
             {
-                setWindowPlacementField = GetWindowPlacementFieldSetter(remainingArguments);
+                getBounds = GetBoundsGetter(remainingArguments);
             }
             catch (FormatException)
             {
@@ -115,22 +103,17 @@ namespace Size
                 return;
             }
 
-            WindowStateSetter setWindowState = GetWindowStateSetter(maximize, minimize, restore);
+            var getActualBounds = adjust ? handle =>
+            {
+                (var x, var y, var width, var height) = getBounds(handle);
+                return Adjust(x, y, width, height);
+            }
+            : getBounds;
 
-            int windowPlacementLength = Marshal.SizeOf(typeof(WINDOWPLACEMENT));
             foreach (Process process in targetProcesses)
             {
-                WINDOWPLACEMENT wp;
-                // https://docs.microsoft.com/en-us/windows/desktop/api/winuser/ns-winuser-tagwindowplacement
-                // には、GetWindowPlacement を呼び出す前にも length をセットせよと書いてある。
-                wp.length = windowPlacementLength;
-
-                GetWindowPlacement(process.MainWindowHandle, out wp);
-
-                setWindowPlacementField(ref wp.rcNormalPosition.left, ref wp.rcNormalPosition.top, ref wp.rcNormalPosition.right, ref wp.rcNormalPosition.bottom);
-                setWindowState(ref wp.showCmd);
-
-                SetWindowPlacement(process.MainWindowHandle, ref wp);
+                (var x, var y, var width, var height) = getActualBounds(process.MainWindowHandle);
+                MoveWindow(process.MainWindowHandle, x, y, width, height, 1);
             }
         }
 
@@ -149,86 +132,93 @@ namespace Size
             }
         }
 
-        private WindowPlacementFieldSetter GetWindowPlacementFieldSetter(IList<string> remainingArguments)
+        private Func<IntPtr, (int, int, int, int)> GetBoundsGetter(IList<string> remainingArguments)
         {
-            var argumentsEnumerator = remainingArguments.GetEnumerator();
-
-            if (!argumentsEnumerator.MoveNext())
+            switch (remainingArguments.Count)
             {
-                return (ref int left, ref int top, ref int right, ref int bottom) => { };
+                case 0:
+                    return handle =>
+                    {
+                        GetWindowRect(handle, out var rect);
+                        return (rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top);
+                    };
+                case 1:
+                    int x1 = int.Parse(remainingArguments[0]);
+                    return handle =>
+                    {
+                        GetWindowRect(handle, out var rect);
+                        return (x1, rect.top, rect.right - rect.left, rect.bottom - rect.top);
+                    };
+                case 2:
+                    int x2 = int.Parse(remainingArguments[0]);
+                    int y2 = int.Parse(remainingArguments[1]);
+                    return handle =>
+                    {
+                        GetWindowRect(handle, out var rect);
+                        return (x2, y2, rect.right - rect.left, rect.bottom - rect.top);
+                    };
+                case 3:
+                    int x3 = int.Parse(remainingArguments[0]);
+                    int y3 = int.Parse(remainingArguments[1]);
+                    int w3 = int.Parse(remainingArguments[2]);
+                    return handle =>
+                    {
+                        GetWindowRect(handle, out var rect);
+                        return (x3, y3, w3, rect.bottom - rect.top);
+                    };
+                default:
+                    int x4 = int.Parse(remainingArguments[0]);
+                    int y4 = int.Parse(remainingArguments[1]);
+                    int w4 = int.Parse(remainingArguments[2]);
+                    int h4 = int.Parse(remainingArguments[3]);
+                    return handle => (x4, y4, w4, h4);
             }
-
-            int l = int.Parse(argumentsEnumerator.Current);
-
-            if (!argumentsEnumerator.MoveNext())
-            {
-                return (ref int left, ref int top, ref int right, ref int bottom) =>
-                {
-                    left = l;
-                };
-            }
-
-            int t = int.Parse(argumentsEnumerator.Current);
-
-            if (!argumentsEnumerator.MoveNext())
-            {
-                return (ref int left, ref int top, ref int right, ref int bottom) =>
-                {
-                    left = l;
-                    top = t;
-                };
-            }
-
-            int r = l + int.Parse(argumentsEnumerator.Current);
-
-            if (!argumentsEnumerator.MoveNext())
-            {
-                return (ref int left, ref int top, ref int right, ref int bottom) =>
-                {
-                    left = l;
-                    top = t;
-                    right = r;
-                };
-            }
-
-            int b = t + int.Parse(argumentsEnumerator.Current);
-
-            return (ref int left, ref int top, ref int right, ref int bottom) =>
-            {
-                left = l;
-                top = t;
-                right = r;
-                bottom = b;
-            };
         }
 
-        private WindowStateSetter GetWindowStateSetter(bool maximize, bool minimize, bool restore)
+        private (int, int, int, int) Adjust(int x, int y, int width, int height)
         {
-            if (minimize)
+            var virtualScreenLeft = SystemParameters.VirtualScreenLeft;
+            var virtualScreenTop = SystemParameters.VirtualScreenTop;
+            var virtualScreenWidth = SystemParameters.VirtualScreenWidth;
+            var virtualScreenHeight = SystemParameters.VirtualScreenHeight;
+
+            if (x < virtualScreenLeft)
             {
-                return (ref uint showCmd) =>
+                x = (int)virtualScreenLeft;
+            }
+
+            if (y < virtualScreenTop)
+            {
+                y = (int)virtualScreenTop;
+            }
+
+            if (x + width > virtualScreenLeft + virtualScreenWidth)
+            {
+                if (width > virtualScreenWidth)
                 {
-                    showCmd = SW_MINIMIZE;
-                };
-            }
-            else if (maximize)
-            {
-                return (ref uint showCmd) =>
+                    x = 0;
+                    width = (int)virtualScreenWidth;
+                }
+                else
                 {
-                    showCmd = SW_MAXIMIZE;
-                };
+                    x = (int)(virtualScreenLeft + virtualScreenWidth) - width;
+                }
             }
-            else if (restore)
+
+            if (y + height > virtualScreenTop + virtualScreenHeight)
             {
-                return (ref uint showCmd) =>
+                if (height > virtualScreenHeight)
                 {
-                    showCmd = SW_RESTORE;
-                };
+                    y = 0;
+                    height = (int)virtualScreenHeight;
+                }
+                else
+                {
+                    y = (int)(virtualScreenTop + virtualScreenHeight) - height;
+                }
             }
-            else
-            {
-                return (ref uint showCmd) => { };
-            }
+
+            return (x, y, width, height);
         }
 
         private void UpdateJumpList(IEnumerable<string> args)
@@ -320,27 +310,6 @@ namespace Size
             }
 
             Console.WriteLine($"{title} {x} {y} {width} {height}");
-        }
-
-        [StructLayout(LayoutKind.Sequential)]
-        public struct WINDOWPLACEMENT
-        {
-            public int length;
-            public uint flags;
-            public uint showCmd;
-            public POINT ptMinPosition;
-            public POINT ptMaxPosition;
-            public RECT rcNormalPosition;
-            // https://docs.microsoft.com/en-us/windows/desktop/api/winuser/ns-winuser-tagwindowplacement
-            // には RECT rcDevice というフィールドも載っているが、このフィールドは不要。
-            // 参考: https://ja.stackoverflow.com/questions/49492/c-2010-%E6%9C%80%E5%B0%8F%E5%8C%96%E6%99%82%E3%81%AE%E3%83%95%E3%82%A9%E3%83%BC%E3%83%A0%E5%BA%A7%E6%A8%99%E3%82%92%E5%8F%96%E5%BE%97
-        }
-
-        [StructLayout(LayoutKind.Sequential)]
-        public struct POINT
-        {
-            public int x;
-            public int y;
         }
 
         [StructLayout(LayoutKind.Sequential)]
