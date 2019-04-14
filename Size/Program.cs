@@ -143,34 +143,36 @@ namespace Size
                         return (rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top);
                     };
                 case 1:
-                    int x1 = int.Parse(remainingArguments[0]);
+                    // int.Parse(remainingArguments[0], NumberStyles.AllowDecimalPoint)
+                    // では不十分。int.Parse では、小数部は0しか認められないため（それ以外は OverflowException になる）。
+                    int x1 = (int)float.Parse(remainingArguments[0]);
                     return handle =>
                     {
                         GetWindowRect(handle, out var rect);
                         return (x1, rect.top, rect.right - rect.left, rect.bottom - rect.top);
                     };
                 case 2:
-                    int x2 = int.Parse(remainingArguments[0]);
-                    int y2 = int.Parse(remainingArguments[1]);
+                    int x2 = (int)float.Parse(remainingArguments[0]);
+                    int y2 = (int)float.Parse(remainingArguments[1]);
                     return handle =>
                     {
                         GetWindowRect(handle, out var rect);
                         return (x2, y2, rect.right - rect.left, rect.bottom - rect.top);
                     };
                 case 3:
-                    int x3 = int.Parse(remainingArguments[0]);
-                    int y3 = int.Parse(remainingArguments[1]);
-                    int w3 = int.Parse(remainingArguments[2]);
+                    int x3 = (int)float.Parse(remainingArguments[0]);
+                    int y3 = (int)float.Parse(remainingArguments[1]);
+                    int w3 = (int)float.Parse(remainingArguments[2]);
                     return handle =>
                     {
                         GetWindowRect(handle, out var rect);
                         return (x3, y3, w3, rect.bottom - rect.top);
                     };
                 default:
-                    int x4 = int.Parse(remainingArguments[0]);
-                    int y4 = int.Parse(remainingArguments[1]);
-                    int w4 = int.Parse(remainingArguments[2]);
-                    int h4 = int.Parse(remainingArguments[3]);
+                    int x4 = (int)float.Parse(remainingArguments[0]);
+                    int y4 = (int)float.Parse(remainingArguments[1]);
+                    int w4 = (int)float.Parse(remainingArguments[2]);
+                    int h4 = (int)float.Parse(remainingArguments[3]);
                     return handle => (x4, y4, w4, h4);
             }
         }
