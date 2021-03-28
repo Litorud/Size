@@ -13,8 +13,13 @@ namespace Size
 {
     public partial class Program : Application
     {
+        private const int DWMWA_EXTENDED_FRAME_BOUNDS = 9;
+
         [DllImport("user32.dll")]
         private static extern int GetWindowRect(IntPtr hWnd, out RECT lpRECT);
+
+        [DllImport("dwmapi.dll")]
+        private static extern long DwmGetWindowAttribute(IntPtr hWnd, int dwAttribute, out RECT rect, int cbAttribute);
 
         [DllImport("user32.dll")]
         private static extern int MoveWindow(IntPtr hWnd, int x, int y, int nWidth, int nHeight, int bRepaint);
@@ -68,12 +73,9 @@ namespace Size
             });
 
             commandLineApplication.Execute(e.Args);
-#if !DEBUG
-            Shutdown();
-#endif
         }
 
-        public void SetSize(string title, IList<string> remainingArguments, bool isRegex, bool adjust)
+        public void SetSize(string title, List<string> remainingArguments, bool isRegex, bool adjust)
         {
             IEnumerable<Process> targetProcesses;
             try
@@ -92,28 +94,97 @@ namespace Size
                 return;
             }
 
-            Func<IntPtr, (int, int, int, int)> getBounds;
+            List<int> args;
             try
             {
-                getBounds = GetBoundsGetter(remainingArguments);
+                // int.Parse(a, NumberStyles.AllowDecimalPoint)
+                // では不十分。int.Parse では、小数部は0しか認められないため（それ以外は OverflowException になる）。
+                args = remainingArguments.ConvertAll(a => (int)float.Parse(a));
             }
             catch (FormatException)
             {
-                Console.WriteLine("位置またはサイズの値が正しくありません。");
+                Console.WriteLine("位置とサイズには数値を指定してください。");
                 return;
             }
 
-            var getActualBounds = adjust ? handle =>
-            {
-                (var x, var y, var width, var height) = getBounds(handle);
-                return Adjust(x, y, width, height);
-            }
-            : getBounds;
-
             foreach (Process process in targetProcesses)
             {
-                (var x, var y, var width, var height) = getActualBounds(process.MainWindowHandle);
-                MoveWindow(process.MainWindowHandle, x, y, width, height, 1);
+                GetWindowRect(process.MainWindowHandle, out var rect);
+                // 次の5行は、args.Length が 0 かつ adjust == false の場合、無駄な処理になる。
+                DwmGetWindowAttribute(process.MainWindowHandle, DWMWA_EXTENDED_FRAME_BOUNDS, out var rect2, Marshal.SizeOf(typeof(Rect)));
+                var 左透明部 = rect2.left - rect.left;
+                var 上透明部 = rect2.top - rect.top;
+                var 右透明部 = rect.right - rect2.right;
+                var 下透明部 = rect.bottom - rect2.bottom;
+
+                int newX, newY, newW, newH;
+                switch (args.Count)
+                {
+                    case 0:
+                        newX = rect.left;
+                        newY = rect.top;
+                        newW = rect.right - rect.left;
+                        newH = rect.bottom - rect.top;
+                        break;
+                    case 1:
+                        newX = args[0] - 左透明部;
+                        newY = rect.top;
+                        newW = rect.right - rect.left;
+                        newH = rect.bottom - rect.top;
+                        break;
+                    case 2:
+                        newX = args[0] - 左透明部;
+                        newY = args[1] - 上透明部;
+                        newW = rect.right - rect.left;
+                        newH = rect.bottom - rect.top;
+                        break;
+                    case 3:
+                        newX = args[0] - 左透明部;
+                        newY = args[1] - 上透明部;
+                        newW = args[2] + 左透明部 + 右透明部;
+                        newH = rect.bottom - rect.top;
+                        break;
+                    default:
+                        newX = args[0] - 左透明部;
+                        newY = args[1] - 上透明部;
+                        newW = args[2] + 左透明部 + 右透明部;
+                        newH = args[3] + 上透明部 + 下透明部;
+                        break;
+                }
+
+                if (adjust)
+                {
+                    var virtualScreenLeft = SystemParameters.VirtualScreenLeft;
+                    var virtualScreenTop = SystemParameters.VirtualScreenTop;
+                    var virtualScreenWidth = SystemParameters.VirtualScreenWidth;
+                    var virtualScreenHeight = SystemParameters.VirtualScreenHeight;
+
+                    var newBottom = newY + newH - 下透明部;
+                    var virtualScreenBottom = (int)(virtualScreenTop + virtualScreenHeight);
+                    if (newBottom > virtualScreenBottom)
+                    {
+                        newY -= newBottom - virtualScreenBottom;
+                    }
+
+                    var newRight = newX + newW - 右透明部;
+                    var virtualScreenRight = (int)(virtualScreenLeft + virtualScreenWidth);
+                    if (newRight > virtualScreenRight)
+                    {
+                        newX -= newRight - virtualScreenRight;
+                    }
+
+                    if (newY + 上透明部 < virtualScreenTop)
+                    {
+                        newY = (int)virtualScreenTop - 上透明部;
+                    }
+
+                    if (newX + 左透明部 < virtualScreenLeft)
+                    {
+                        newX = (int)virtualScreenLeft - 左透明部;
+                    }
+                }
+
+                MoveWindow(process.MainWindowHandle, newX, newY, newW, newH, 1);
             }
         }
 
@@ -130,97 +201,6 @@ namespace Size
             {
                 return processes.Where(p => p.MainWindowTitle.IndexOf(title, StringComparison.CurrentCultureIgnoreCase) >= 0);
             }
-        }
-
-        private Func<IntPtr, (int, int, int, int)> GetBoundsGetter(IList<string> remainingArguments)
-        {
-            switch (remainingArguments.Count)
-            {
-                case 0:
-                    return handle =>
-                    {
-                        GetWindowRect(handle, out var rect);
-                        return (rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top);
-                    };
-                case 1:
-                    // int.Parse(remainingArguments[0], NumberStyles.AllowDecimalPoint)
-                    // では不十分。int.Parse では、小数部は0しか認められないため（それ以外は OverflowException になる）。
-                    int x1 = (int)float.Parse(remainingArguments[0]);
-                    return handle =>
-                    {
-                        GetWindowRect(handle, out var rect);
-                        return (x1, rect.top, rect.right - rect.left, rect.bottom - rect.top);
-                    };
-                case 2:
-                    int x2 = (int)float.Parse(remainingArguments[0]);
-                    int y2 = (int)float.Parse(remainingArguments[1]);
-                    return handle =>
-                    {
-                        GetWindowRect(handle, out var rect);
-                        return (x2, y2, rect.right - rect.left, rect.bottom - rect.top);
-                    };
-                case 3:
-                    int x3 = (int)float.Parse(remainingArguments[0]);
-                    int y3 = (int)float.Parse(remainingArguments[1]);
-                    int w3 = (int)float.Parse(remainingArguments[2]);
-                    return handle =>
-                    {
-                        GetWindowRect(handle, out var rect);
-                        return (x3, y3, w3, rect.bottom - rect.top);
-                    };
-                default:
-                    int x4 = (int)float.Parse(remainingArguments[0]);
-                    int y4 = (int)float.Parse(remainingArguments[1]);
-                    int w4 = (int)float.Parse(remainingArguments[2]);
-                    int h4 = (int)float.Parse(remainingArguments[3]);
-                    return handle => (x4, y4, w4, h4);
-            }
-        }
-
-        private (int, int, int, int) Adjust(int x, int y, int width, int height)
-        {
-            var virtualScreenLeft = SystemParameters.VirtualScreenLeft;
-            var virtualScreenTop = SystemParameters.VirtualScreenTop;
-            var virtualScreenWidth = SystemParameters.VirtualScreenWidth;
-            var virtualScreenHeight = SystemParameters.VirtualScreenHeight;
-
-            if (x < virtualScreenLeft)
-            {
-                x = (int)virtualScreenLeft;
-            }
-
-            if (y < virtualScreenTop)
-            {
-                y = (int)virtualScreenTop;
-            }
-
-            if (x + width > virtualScreenLeft + virtualScreenWidth)
-            {
-                if (width > virtualScreenWidth)
-                {
-                    x = 0;
-                    width = (int)virtualScreenWidth;
-                }
-                else
-                {
-                    x = (int)(virtualScreenLeft + virtualScreenWidth) - width;
-                }
-            }
-
-            if (y + height > virtualScreenTop + virtualScreenHeight)
-            {
-                if (height > virtualScreenHeight)
-                {
-                    y = 0;
-                    height = (int)virtualScreenHeight;
-                }
-                else
-                {
-                    y = (int)(virtualScreenTop + virtualScreenHeight) - height;
-                }
-            }
-
-            return (x, y, width, height);
         }
 
         private void UpdateJumpList(IEnumerable<string> args)
