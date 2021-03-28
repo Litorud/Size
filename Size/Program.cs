@@ -107,84 +107,99 @@ namespace Size
                 return;
             }
 
-            foreach (Process process in targetProcesses)
+            Func<RECT, RECT, (int, int, int, int)> calculateBounds;
+            switch (args.Count)
             {
-                GetWindowRect(process.MainWindowHandle, out var rect);
-                // 次の5行は、args.Length が 0 かつ adjust == false の場合、無駄な処理になる。
-                DwmGetWindowAttribute(process.MainWindowHandle, DWMWA_EXTENDED_FRAME_BOUNDS, out var rect2, Marshal.SizeOf(typeof(Rect)));
-                var 左透明部 = rect2.left - rect.left;
-                var 上透明部 = rect2.top - rect.top;
-                var 右透明部 = rect.right - rect2.right;
-                var 下透明部 = rect.bottom - rect2.bottom;
+                case 0:
+                    calculateBounds = (windowRect, extendedFrameBounds) => (windowRect.left, windowRect.top, windowRect.right - windowRect.left, windowRect.bottom - windowRect.top);
+                    break;
+                case 1:
+                    calculateBounds = (windowRect, extendedFrameBounds) =>
+                    {
+                        var x = args[0] - (extendedFrameBounds.left - windowRect.left); // = args[0] - 左透明部
+                        return (x, windowRect.top, windowRect.right - windowRect.left, windowRect.bottom - windowRect.top);
+                    };
+                    break;
+                case 2:
+                    calculateBounds = (windowRect, extendedFrameBounds) =>
+                    {
+                        var x = args[0] - (extendedFrameBounds.left - windowRect.left);
+                        var y = args[1] - (extendedFrameBounds.top - windowRect.top);
+                        return (x, y, windowRect.right - windowRect.left, windowRect.bottom - windowRect.top);
+                    };
+                    break;
+                case 3:
+                    calculateBounds = (windowRect, extendedFrameBounds) =>
+                    {
+                        var x = args[0] - (extendedFrameBounds.left - windowRect.left);
+                        var y = args[1] - (extendedFrameBounds.top - windowRect.top);
+                        var width = args[2] + extendedFrameBounds.left - windowRect.left + windowRect.right - extendedFrameBounds.right; // = args[2] + 左透明部 + 右透明部
+                        return (x, y, width, windowRect.bottom - windowRect.top);
+                    };
+                    break;
+                default:
+                    calculateBounds = (windowRect, extendedFrameBounds) =>
+                    {
+                        var x = args[0] - (extendedFrameBounds.left - windowRect.left);
+                        var y = args[1] - (extendedFrameBounds.top - windowRect.top);
+                        var width = args[2] + extendedFrameBounds.left - windowRect.left + windowRect.right - extendedFrameBounds.right;
+                        var height = args[3] + extendedFrameBounds.top - windowRect.top + windowRect.bottom - extendedFrameBounds.bottom;
+                        return (x, y, width, height);
+                    };
+                    break;
+            }
 
-                int newX, newY, newW, newH;
-                switch (args.Count)
+            if (adjust)
+            {
+                var calculateBoundsMain = calculateBounds;
+                calculateBounds = (windowRect, extendedFrameBounds) =>
                 {
-                    case 0:
-                        newX = rect.left;
-                        newY = rect.top;
-                        newW = rect.right - rect.left;
-                        newH = rect.bottom - rect.top;
-                        break;
-                    case 1:
-                        newX = args[0] - 左透明部;
-                        newY = rect.top;
-                        newW = rect.right - rect.left;
-                        newH = rect.bottom - rect.top;
-                        break;
-                    case 2:
-                        newX = args[0] - 左透明部;
-                        newY = args[1] - 上透明部;
-                        newW = rect.right - rect.left;
-                        newH = rect.bottom - rect.top;
-                        break;
-                    case 3:
-                        newX = args[0] - 左透明部;
-                        newY = args[1] - 上透明部;
-                        newW = args[2] + 左透明部 + 右透明部;
-                        newH = rect.bottom - rect.top;
-                        break;
-                    default:
-                        newX = args[0] - 左透明部;
-                        newY = args[1] - 上透明部;
-                        newW = args[2] + 左透明部 + 右透明部;
-                        newH = args[3] + 上透明部 + 下透明部;
-                        break;
-                }
+                    var (x, y, width, height) = calculateBoundsMain(windowRect, extendedFrameBounds);
 
-                if (adjust)
-                {
-                    var virtualScreenLeft = SystemParameters.VirtualScreenLeft;
-                    var virtualScreenTop = SystemParameters.VirtualScreenTop;
-                    var virtualScreenWidth = SystemParameters.VirtualScreenWidth;
-                    var virtualScreenHeight = SystemParameters.VirtualScreenHeight;
+                    var virtualScreenLeft = (int)SystemParameters.VirtualScreenLeft;
+                    var virtualScreenTop = (int)SystemParameters.VirtualScreenTop;
+                    var virtualScreenRight = (int)(SystemParameters.VirtualScreenLeft + SystemParameters.VirtualScreenWidth);
+                    var virtualScreenBottom = (int)(SystemParameters.VirtualScreenTop + SystemParameters.VirtualScreenHeight);
 
-                    var newBottom = newY + newH - 下透明部;
-                    var virtualScreenBottom = (int)(virtualScreenTop + virtualScreenHeight);
-                    if (newBottom > virtualScreenBottom)
+                    var bottom = y + height - (windowRect.bottom - extendedFrameBounds.bottom); // = y + height - 下透明部
+                    if (bottom > virtualScreenBottom)
                     {
-                        newY -= newBottom - virtualScreenBottom;
+                        y -= bottom - virtualScreenBottom;
                     }
 
-                    var newRight = newX + newW - 右透明部;
-                    var virtualScreenRight = (int)(virtualScreenLeft + virtualScreenWidth);
-                    if (newRight > virtualScreenRight)
+                    var right = x + width - (windowRect.right - extendedFrameBounds.right);
+                    if (right > virtualScreenRight)
                     {
-                        newX -= newRight - virtualScreenRight;
+                        x -= right - virtualScreenRight;
                     }
 
-                    if (newY + 上透明部 < virtualScreenTop)
+                    var 上透明部 = extendedFrameBounds.top - windowRect.top;
+                    var top = y + 上透明部;
+                    if (top < virtualScreenTop)
                     {
-                        newY = (int)virtualScreenTop - 上透明部;
+                        y = virtualScreenTop - 上透明部;
                     }
 
-                    if (newX + 左透明部 < virtualScreenLeft)
+                    var 左透明部 = extendedFrameBounds.left - windowRect.left;
+                    var left = x + 左透明部;
+                    if (left < virtualScreenLeft)
                     {
-                        newX = (int)virtualScreenLeft - 左透明部;
+                        x = virtualScreenLeft - 左透明部;
                     }
-                }
 
-                MoveWindow(process.MainWindowHandle, newX, newY, newW, newH, 1);
+                    return (x, y, width, height);
+                };
+            }
+
+            foreach (var process in targetProcesses)
+            {
+                GetWindowRect(process.MainWindowHandle, out var windowRect);
+                // 次の呼び出しは、args.Length が 0 かつ adjust == false の場合、無駄な処理になる。
+                // が、めったにないケースなので気にしない。
+                DwmGetWindowAttribute(process.MainWindowHandle, DWMWA_EXTENDED_FRAME_BOUNDS, out var extendedFrameBounds, Marshal.SizeOf(typeof(Rect)));
+
+                var (x, y, width, height) = calculateBounds(windowRect, extendedFrameBounds);
+                MoveWindow(process.MainWindowHandle, x, y, width, height, 1);
             }
         }
 
