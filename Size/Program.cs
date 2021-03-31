@@ -26,8 +26,6 @@ namespace Size
 
         public static string PowerShellArguments { get; } = $"-noexit -Command Set-Location '{AppDomain.CurrentDomain.BaseDirectory}'";
 
-        private static Encoding encoding = Encoding.GetEncoding(932);
-
         protected override void OnStartup(StartupEventArgs e)
         {
             var commandLineApplication = new CommandLineApplication(false)
@@ -261,53 +259,58 @@ namespace Size
              * https://dobon.net/vb/dotnet/system/displaysize.html
              * https://mseeeen.msen.jp/get-screen-bounds-with-multiple-monitors-in-wpf/
              * http://sliceof-it.blogspot.com/2012/02/systemparameters-screen-resolutions-wpf.html
-             **/
-            WriteBounds("(PrimaryScreen)", 0, 0, SystemParameters.PrimaryScreenWidth, SystemParameters.PrimaryScreenHeight);
-            WriteBounds(
-                "(VirtualScreen)",
-                SystemParameters.VirtualScreenLeft,
-                SystemParameters.VirtualScreenTop,
-                SystemParameters.VirtualScreenWidth,
-                SystemParameters.VirtualScreenHeight);
-            var workArea = SystemParameters.WorkArea;
-            WriteBounds(
-                "(WorkArea)",
-                workArea.X,
-                workArea.Y,
-                workArea.Width,
-                workArea.Height);
+             */
+            var rows = new List<Row>
+            {
+                new Row("(PrimaryScreen)", 0, 0, SystemParameters.PrimaryScreenWidth, SystemParameters.PrimaryScreenHeight),
+                new Row(
+                    "(VirtualScreen)",
+                    SystemParameters.VirtualScreenLeft,
+                    SystemParameters.VirtualScreenTop,
+                    SystemParameters.VirtualScreenWidth,
+                    SystemParameters.VirtualScreenHeight),
+                new Row(
+                    "(WorkArea)",
+                    SystemParameters.WorkArea.X,
+                    SystemParameters.WorkArea.Y,
+                    SystemParameters.WorkArea.Width,
+                    SystemParameters.WorkArea.Height)
+            };
 
             var targetProcesses = Process.GetProcesses()
                 .Where(p => p.MainWindowHandle.ToInt64() > 0 && !string.IsNullOrEmpty(p.MainWindowTitle));
-
             foreach (var process in targetProcesses)
             {
                 DwmGetWindowAttribute(process.MainWindowHandle, DWMWA_EXTENDED_FRAME_BOUNDS, out var extendedFrameBounds, Marshal.SizeOf(typeof(Rect)));
 
-                WriteBounds(
+                rows.Add(new Row(
                     process.MainWindowTitle,
                     extendedFrameBounds.left,
                     extendedFrameBounds.top,
                     extendedFrameBounds.right - extendedFrameBounds.left,
-                    extendedFrameBounds.bottom - extendedFrameBounds.top);
+                    extendedFrameBounds.bottom - extendedFrameBounds.top));
             }
-        }
 
-        private static void WriteBounds(string title, double x, double y, double width, double height)
-        {
-            var byteCount = encoding.GetByteCount(title);
-
-            foreach (var limit in new[] { 28, 56 })
+            int maxTitleWidth = 0, maxX = 0, maxY = 0, maxWidth = 0, maxHeight = 0;
+            foreach (var row in rows)
             {
-                if (byteCount <= limit)
-                {
-                    var padding = new string(' ', limit - byteCount);
-                    Console.WriteLine($"{title}{padding} {x,5} {y,5} {width,5} {height,5}");
-                    return;
-                }
+                if (row.TitleWidth > maxTitleWidth) maxTitleWidth = row.TitleWidth;
+                if (row.X.Length > maxX) maxX = row.X.Length;
+                if (row.Y.Length > maxY) maxY = row.Y.Length;
+                if (row.Width.Length > maxWidth) maxWidth = row.Width.Length;
+                if (row.Height.Length > maxHeight) maxHeight = row.Height.Length;
             }
 
-            Console.WriteLine($"{title} {x} {y} {width} {height}");
+            foreach (var row in rows.ToArray())
+            {
+                var titlePadding = new string(' ', maxTitleWidth - row.TitleWidth);
+                var xPadding = new string(' ', maxX - row.X.Length);
+                var yPadding = new string(' ', maxY - row.Y.Length);
+                var widthPadding = new string(' ', maxWidth - row.Width.Length);
+                var heightPadding = new string(' ', maxHeight - row.Height.Length);
+
+                Console.WriteLine($"{row.Title}{titlePadding} {xPadding}{row.X} {yPadding}{row.Y} {widthPadding}{row.Width} {heightPadding}{row.Height}");
+            }
         }
 
         [StructLayout(LayoutKind.Sequential)]
@@ -317,6 +320,28 @@ namespace Size
             public int top;
             public int right;
             public int bottom;
+        }
+
+        private class Row
+        {
+            private static readonly Encoding encoding = Encoding.GetEncoding(932);
+
+            public string Title { get; private set; }
+            public int TitleWidth { get; private set; }
+            public string X { get; private set; }
+            public string Y { get; private set; }
+            public string Width { get; private set; }
+            public string Height { get; private set; }
+
+            public Row(string title, double x, double y, double width, double height)
+            {
+                Title = title;
+                TitleWidth = encoding.GetByteCount(title);
+                X = x.ToString();
+                Y = y.ToString();
+                Width = width.ToString();
+                Height = height.ToString();
+            }
         }
     }
 }
