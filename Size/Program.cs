@@ -282,14 +282,14 @@ namespace Size
 
             foreach (var process in targetProcesses)
             {
-                GetWindowRect(process.MainWindowHandle, out var rect);
+                DwmGetWindowAttribute(process.MainWindowHandle, DWMWA_EXTENDED_FRAME_BOUNDS, out var extendedFrameBounds, Marshal.SizeOf(typeof(Rect)));
 
                 WriteBounds(
                     process.MainWindowTitle,
-                    rect.left,
-                    rect.top,
-                    rect.right - rect.left,
-                    rect.bottom - rect.top);
+                    extendedFrameBounds.left,
+                    extendedFrameBounds.top,
+                    extendedFrameBounds.right - extendedFrameBounds.left,
+                    extendedFrameBounds.bottom - extendedFrameBounds.top);
             }
         }
 
