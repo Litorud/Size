@@ -71,6 +71,10 @@ namespace Size
             });
 
             commandLineApplication.Execute(e.Args);
+
+#if !DEBUG
+            Shutdown();
+#endif
         }
 
         public void SetSize(string title, List<string> remainingArguments, bool isRegex, bool adjust)
