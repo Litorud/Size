@@ -277,33 +277,39 @@ namespace Size
                     SystemParameters.WorkArea.Height)
             };
 
-            var targetProcesses = Process.GetProcesses()
-                .Where(p => p.MainWindowHandle.ToInt64() > 0 && !string.IsNullOrEmpty(p.MainWindowTitle));
-            foreach (var process in targetProcesses)
-            {
-                DwmGetWindowAttribute(process.MainWindowHandle, DWMWA_EXTENDED_FRAME_BOUNDS, out var extendedFrameBounds, Marshal.SizeOf(typeof(Rect)));
+            rows.AddRange(Process.GetProcesses()
+                .Where(p => p.MainWindowHandle.ToInt64() > 0 && !string.IsNullOrEmpty(p.MainWindowTitle))
+                .Select(p =>
+                {
+                    DwmGetWindowAttribute(
+                        p.MainWindowHandle,
+                        DWMWA_EXTENDED_FRAME_BOUNDS,
+                        out var extendedFrameBounds,
+                        Marshal.SizeOf(typeof(Rect)));
+                    return new Row(
+                        p.MainWindowTitle,
+                        extendedFrameBounds.left,
+                        extendedFrameBounds.top,
+                        extendedFrameBounds.right - extendedFrameBounds.left,
+                        extendedFrameBounds.bottom - extendedFrameBounds.top);
+                }));
 
-                rows.Add(new Row(
-                    process.MainWindowTitle,
-                    extendedFrameBounds.left,
-                    extendedFrameBounds.top,
-                    extendedFrameBounds.right - extendedFrameBounds.left,
-                    extendedFrameBounds.bottom - extendedFrameBounds.top));
-            }
-
-            int maxTitleWidth = 0, maxX = 0, maxY = 0, maxWidth = 0, maxHeight = 0;
+            // PrimaryScreen、VirtualScreen、WorkArea、および各ウィンドウから、各値の最大値を探す。
+            int maxX = 0, maxY = 0, maxWidth = 0, maxHeight = 0;
             foreach (var row in rows)
             {
-                if (row.TitleWidth > maxTitleWidth) maxTitleWidth = row.TitleWidth;
                 if (row.X.Length > maxX) maxX = row.X.Length;
                 if (row.Y.Length > maxY) maxY = row.Y.Length;
                 if (row.Width.Length > maxWidth) maxWidth = row.Width.Length;
                 if (row.Height.Length > maxHeight) maxHeight = row.Height.Length;
             }
 
-            foreach (var row in rows.ToArray())
+            int limitTitleWidth = Console.BufferWidth - maxX - maxY - maxWidth - maxHeight - 5; // 4だと折り返しが発生する。
+            int maxTitleWidth = rows.Where(r => r.TitleWidth <= limitTitleWidth).Max(r => r.TitleWidth);
+
+            foreach (var row in rows)
             {
-                var titlePadding = new string(' ', maxTitleWidth - row.TitleWidth);
+                var titlePadding = maxTitleWidth > row.TitleWidth ? new string(' ', maxTitleWidth - row.TitleWidth) : string.Empty;
                 var xPadding = new string(' ', maxX - row.X.Length);
                 var yPadding = new string(' ', maxY - row.Y.Length);
                 var widthPadding = new string(' ', maxWidth - row.Width.Length);
