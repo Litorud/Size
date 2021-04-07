@@ -6,6 +6,12 @@
     <UseWPF>true</UseWPF>
     <Nullable>enable</Nullable>
     <DisableWinExeOutputInference>true</DisableWinExeOutputInference>
+    <Version>3.0.0</Version>
+    <Authors>Itaru</Authors>
+    <Company>Litorud</Company>
+    <Description>Size は、ウィンドウを指定した位置とサイズに変更するプログラムです。</Description>
+    <PackageProjectUrl>https://github.com/Litorud/Size</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/Litorud/Size.git</RepositoryUrl>
   </PropertyGroup>
 
   <ItemGroup>
