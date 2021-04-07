@@ -28,9 +28,10 @@ namespace Size
 
         protected override void OnStartup(StartupEventArgs e)
         {
-            var commandLineApplication = new CommandLineApplication(false)
+            var commandLineApplication = new CommandLineApplication()
             {
-                OptionsComparison = StringComparison.CurrentCultureIgnoreCase
+                OptionsComparison = StringComparison.CurrentCultureIgnoreCase,
+                UnrecognizedArgumentHandling = UnrecognizedArgumentHandling.CollectAndContinue
             };
 
             var titleArgument = commandLineApplication.Argument("title", "この文字列を含むタイトルのウィンドウが変更対象です。");
@@ -72,9 +73,7 @@ namespace Size
 
             commandLineApplication.Execute(e.Args);
 
-#if !DEBUG
             Shutdown();
-#endif
         }
 
         public void SetSize(string title, List<string> remainingArguments, bool isRegex, bool adjust)
@@ -334,7 +333,7 @@ namespace Size
 
         private class Row
         {
-            private static readonly Encoding encoding = Encoding.GetEncoding(932);
+            private static readonly Encoding encoding;
 
             public string Title { get; private set; }
             public int TitleWidth { get; private set; }
@@ -342,6 +341,12 @@ namespace Size
             public string Y { get; private set; }
             public string Width { get; private set; }
             public string Height { get; private set; }
+
+            static Row()
+            {
+                Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+                encoding = Encoding.GetEncoding(932);
+            }
 
             public Row(string title, double x, double y, double width, double height)
             {
