@@ -14,12 +14,16 @@ namespace Size
     public partial class Program : Application
     {
         private const int DWMWA_EXTENDED_FRAME_BOUNDS = 9;
+        private const int DWMWA_CLOAKED = 14;
 
         [DllImport("user32.dll")]
         private static extern int GetWindowRect(IntPtr hWnd, out RECT lpRECT);
 
         [DllImport("dwmapi.dll")]
-        private static extern long DwmGetWindowAttribute(IntPtr hWnd, int dwAttribute, out RECT rect, int cbAttribute);
+        private static extern bool DwmGetWindowAttribute(IntPtr hWnd, int dwAttribute, out RECT rect, int cbAttribute);
+
+        [DllImport("dwmapi.dll")]
+        private static extern bool DwmGetWindowAttribute(IntPtr hWnd, int dwAttribute, out bool cloaked, int cbAttribute);
 
         [DllImport("user32.dll")]
         private static extern int MoveWindow(IntPtr hWnd, int x, int y, int nWidth, int nHeight, int bRepaint);
@@ -197,7 +201,7 @@ namespace Size
                 GetWindowRect(process.MainWindowHandle, out var windowRect);
                 // 次の呼び出しは、args.Length が 0 かつ adjust == false の場合、無駄な処理になる。
                 // が、めったにないケースなので気にしない。
-                DwmGetWindowAttribute(process.MainWindowHandle, DWMWA_EXTENDED_FRAME_BOUNDS, out var extendedFrameBounds, Marshal.SizeOf(typeof(Rect)));
+                DwmGetWindowAttribute(process.MainWindowHandle, DWMWA_EXTENDED_FRAME_BOUNDS, out RECT extendedFrameBounds, Marshal.SizeOf(typeof(Rect)));
 
                 var (x, y, width, height) = calculateBounds(windowRect, extendedFrameBounds);
                 MoveWindow(process.MainWindowHandle, x, y, width, height, 1);
@@ -206,7 +210,17 @@ namespace Size
 
         private IEnumerable<Process> GetTargetProcesses(string title, bool isRegex)
         {
-            var processes = Process.GetProcesses().Where(p => p.MainWindowHandle.ToInt64() > 0);
+            var processes = Process.GetProcesses().Where(p =>
+            {
+                if (p.MainWindowHandle.ToInt64() == 0)
+                {
+                    return false;
+                }
+
+                // “cloaked” 状態のウィンドウを検出して除外する。
+                DwmGetWindowAttribute(p.MainWindowHandle, DWMWA_CLOAKED, out bool cloaked, Marshal.SizeOf(typeof(bool)));
+                return !cloaked;
+            });
 
             if (isRegex)
             {
@@ -281,13 +295,23 @@ namespace Size
             };
 
             rows.AddRange(Process.GetProcesses()
-                .Where(p => p.MainWindowHandle.ToInt64() > 0 && !string.IsNullOrEmpty(p.MainWindowTitle))
+                .Where(p =>
+                {
+                    if (p.MainWindowHandle.ToInt64() == 0 || string.IsNullOrEmpty(p.MainWindowTitle))
+                    {
+                        return false;
+                    }
+
+                    // “cloaked” 状態のウィンドウを検出して除外する。
+                    DwmGetWindowAttribute(p.MainWindowHandle, DWMWA_CLOAKED, out bool cloaked, Marshal.SizeOf(typeof(bool)));
+                    return !cloaked;
+                })
                 .Select(p =>
                 {
                     DwmGetWindowAttribute(
                         p.MainWindowHandle,
                         DWMWA_EXTENDED_FRAME_BOUNDS,
-                        out var extendedFrameBounds,
+                        out RECT extendedFrameBounds,
                         Marshal.SizeOf(typeof(Rect)));
                     return new Row(
                         p.MainWindowTitle,
