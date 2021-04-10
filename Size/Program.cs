@@ -331,7 +331,12 @@ namespace Size
                 if (row.Height.Length > maxHeight) maxHeight = row.Height.Length;
             }
 
-            int limitTitleWidth = Console.BufferWidth - maxX - maxY - maxWidth - maxHeight - 5; // 4だと折り返しが発生する。
+            // 以下の式で、最後のひく数を5ではなく4にすると、Windows PowerShell を起動したときに開くウィンドウで実行したときのみ、
+            // 不要な折り返しが発生する（幅ちょうどに収まっているのに折り返しが発生する）。
+            // ジャンプリストでは Windows PowerShell が開くため、これに最適化して引く数を5としている。
+            // また、Console.BufferWidth ではなく Console.WindowWidth を使う。
+            // BufferWidth > WindowWidth の場合、横スクロールバーが表示される。
+            int limitTitleWidth = Console.WindowWidth - maxX - maxY - maxWidth - maxHeight - 5;
             int maxTitleWidth = rows.Where(r => r.TitleWidth <= limitTitleWidth).Max(r => r.TitleWidth);
 
             foreach (var row in rows)
