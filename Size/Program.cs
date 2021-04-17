@@ -96,47 +96,39 @@ namespace Size
                 return;
             }
 
-            Func<Rect, Rect, (int, int, int, int)> calculateBounds;
-            switch (args.Count)
+            Func<Rect, Rect, (int, int, int, int)> calculateBounds = args.Count switch
             {
-                case 0:
-                    calculateBounds = (windowRect, extendedFrameBounds) => (windowRect.left, windowRect.top, windowRect.right - windowRect.left, windowRect.bottom - windowRect.top);
-                    break;
-                case 1:
-                    calculateBounds = (windowRect, extendedFrameBounds) =>
-                    {
-                        var x = args[0] - (extendedFrameBounds.left - windowRect.left); // = args[0] - 左透明部
-                        return (x, windowRect.top, windowRect.right - windowRect.left, windowRect.bottom - windowRect.top);
-                    };
-                    break;
-                case 2:
-                    calculateBounds = (windowRect, extendedFrameBounds) =>
-                    {
-                        var x = args[0] - (extendedFrameBounds.left - windowRect.left);
-                        var y = args[1] - (extendedFrameBounds.top - windowRect.top);
-                        return (x, y, windowRect.right - windowRect.left, windowRect.bottom - windowRect.top);
-                    };
-                    break;
-                case 3:
-                    calculateBounds = (windowRect, extendedFrameBounds) =>
-                    {
-                        var x = args[0] - (extendedFrameBounds.left - windowRect.left);
-                        var y = args[1] - (extendedFrameBounds.top - windowRect.top);
-                        var width = args[2] + extendedFrameBounds.left - windowRect.left + windowRect.right - extendedFrameBounds.right; // = args[2] + 左透明部 + 右透明部
-                        return (x, y, width, windowRect.bottom - windowRect.top);
-                    };
-                    break;
-                default:
-                    calculateBounds = (windowRect, extendedFrameBounds) =>
-                    {
-                        var x = args[0] - (extendedFrameBounds.left - windowRect.left);
-                        var y = args[1] - (extendedFrameBounds.top - windowRect.top);
-                        var width = args[2] + extendedFrameBounds.left - windowRect.left + windowRect.right - extendedFrameBounds.right;
-                        var height = args[3] + extendedFrameBounds.top - windowRect.top + windowRect.bottom - extendedFrameBounds.bottom;
-                        return (x, y, width, height);
-                    };
-                    break;
-            }
+                0 => (windowRect, extendedFrameBounds) => (windowRect.left, windowRect.top, windowRect.right - windowRect.left, windowRect.bottom - windowRect.top),
+                1 => (windowRect, extendedFrameBounds) =>
+                {
+                    var x = args[0] - (extendedFrameBounds.left - windowRect.left); // = args[0] - 左透明部
+                    return (x, windowRect.top, windowRect.right - windowRect.left, windowRect.bottom - windowRect.top);
+                }
+                ,
+                2 => (windowRect, extendedFrameBounds) =>
+                {
+                    var x = args[0] - (extendedFrameBounds.left - windowRect.left);
+                    var y = args[1] - (extendedFrameBounds.top - windowRect.top);
+                    return (x, y, windowRect.right - windowRect.left, windowRect.bottom - windowRect.top);
+                }
+                ,
+                3 => (windowRect, extendedFrameBounds) =>
+                {
+                    var x = args[0] - (extendedFrameBounds.left - windowRect.left);
+                    var y = args[1] - (extendedFrameBounds.top - windowRect.top);
+                    var width = args[2] + extendedFrameBounds.left - windowRect.left + windowRect.right - extendedFrameBounds.right; // = args[2] + 左透明部 + 右透明部
+                    return (x, y, width, windowRect.bottom - windowRect.top);
+                }
+                ,
+                _ => (windowRect, extendedFrameBounds) =>
+                {
+                    var x = args[0] - (extendedFrameBounds.left - windowRect.left);
+                    var y = args[1] - (extendedFrameBounds.top - windowRect.top);
+                    var width = args[2] + extendedFrameBounds.left - windowRect.left + windowRect.right - extendedFrameBounds.right;
+                    var height = args[3] + extendedFrameBounds.top - windowRect.top + windowRect.bottom - extendedFrameBounds.bottom;
+                    return (x, y, width, height);
+                }
+            };
 
             if (adjust)
             {
