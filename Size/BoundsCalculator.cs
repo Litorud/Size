@@ -1,16 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Size
 {
-    class BoundsCalculator
+    public class BoundsCalculator
     {
         Func<Rect, Rect, (int, int, int, int)> calculate;
 
-        internal BoundsCalculator(IList<int> args)
+        public BoundsCalculator(IList<int> args)
         {
             calculate = args.Count switch
             {
@@ -47,7 +44,7 @@ namespace Size
             };
         }
 
-        internal void AddAdjustProcess(
+        public void AddAdjustProcess(
             double primaryScreenWidth,
             double primaryScreenHeight,
             double virtualScreenLeft,
@@ -166,7 +163,7 @@ namespace Size
             };
         }
 
-        internal (int, int, int, int) Calculate(Rect windowRect, Rect extendedFrameBounds)
+        public (int, int, int, int) Calculate(Rect windowRect, Rect extendedFrameBounds)
         {
             return calculate(windowRect, extendedFrameBounds);
         }
