@@ -63,7 +63,7 @@ namespace Size
             Shutdown();
         }
 
-        public void SetSize(string title, List<string> remainingArguments, bool isRegex, bool adjust)
+        public static void SetSize(string title, List<string> remainingArguments, bool isRegex, bool adjust)
         {
             IEnumerable<Process> targetProcesses;
             try
@@ -123,7 +123,7 @@ namespace Size
             }
         }
 
-        private IEnumerable<Process> GetTargetProcesses(string title, bool isRegex)
+        private static IEnumerable<Process> GetTargetProcesses(string title, bool isRegex)
         {
             Func<string, bool> titleFilter;
             if (isRegex)
@@ -140,7 +140,7 @@ namespace Size
                 .Where(p => p.MainWindowHandle.ToInt64() != 0 && titleFilter(p.MainWindowTitle) && !Api.IsCloaked(p.MainWindowHandle));
         }
 
-        private void UpdateJumpList(IEnumerable<string> args)
+        private static void UpdateJumpList(IEnumerable<string> args)
         {
             var arguments = ArgumentEscaper.EscapeAndConcatenate(args);
 
