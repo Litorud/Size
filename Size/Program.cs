@@ -3,7 +3,6 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Text;
 using System.Text.RegularExpressions;
 using System.Windows;
 using System.Windows.Shell;
@@ -185,91 +184,41 @@ namespace Size
              * https://mseeeen.msen.jp/get-screen-bounds-with-multiple-monitors-in-wpf/
              * http://sliceof-it.blogspot.com/2012/02/systemparameters-screen-resolutions-wpf.html
              */
-            var rows = new List<Row>
-            {
-                new Row("(PrimaryScreen)", 0, 0, SystemParameters.PrimaryScreenWidth, SystemParameters.PrimaryScreenHeight),
-                new Row(
-                    "(VirtualScreen)",
-                    SystemParameters.VirtualScreenLeft,
-                    SystemParameters.VirtualScreenTop,
-                    SystemParameters.VirtualScreenWidth,
-                    SystemParameters.VirtualScreenHeight),
-                new Row(
-                    "(WorkArea)",
-                    SystemParameters.WorkArea.X,
-                    SystemParameters.WorkArea.Y,
-                    SystemParameters.WorkArea.Width,
-                    SystemParameters.WorkArea.Height)
-            };
-
-            rows.AddRange(Process.GetProcesses()
-                .Where(p => p.MainWindowHandle.ToInt64() != 0 && !string.IsNullOrEmpty(p.MainWindowTitle) && !Api.IsCloaked(p.MainWindowHandle))
-                .Select(p =>
-                {
-                    var extendedFrameBounds = Api.GetExtendedFrameBounds(p.MainWindowHandle);
-                    return new Row(
-                        p.MainWindowTitle,
-                        extendedFrameBounds.left,
-                        extendedFrameBounds.top,
-                        extendedFrameBounds.right - extendedFrameBounds.left,
-                        extendedFrameBounds.bottom - extendedFrameBounds.top);
-                }));
+            var builder = new ListBuilder();
 
             // PrimaryScreen、VirtualScreen、WorkArea、および各ウィンドウから、各値の最大値を探す。
-            int maxX = 0, maxY = 0, maxWidth = 0, maxHeight = 0;
-            foreach (var row in rows)
+            builder.Add("(PrimaryScreen)", 0, 0,
+                SystemParameters.PrimaryScreenWidth,
+                SystemParameters.PrimaryScreenHeight);
+            builder.Add("(VirtualScreen)",
+                SystemParameters.VirtualScreenLeft,
+                SystemParameters.VirtualScreenTop,
+                SystemParameters.VirtualScreenWidth,
+                SystemParameters.VirtualScreenHeight);
+            builder.Add("(WorkArea)",
+                SystemParameters.WorkArea.X,
+                SystemParameters.WorkArea.Y,
+                SystemParameters.WorkArea.Width,
+                SystemParameters.WorkArea.Height);
+
+            var processes = Process.GetProcesses()
+                .Where(p => p.MainWindowHandle.ToInt64() != 0 && !string.IsNullOrEmpty(p.MainWindowTitle) && !Api.IsCloaked(p.MainWindowHandle));
+            foreach (var process in processes)
             {
-                if (row.X.Length > maxX) maxX = row.X.Length;
-                if (row.Y.Length > maxY) maxY = row.Y.Length;
-                if (row.Width.Length > maxWidth) maxWidth = row.Width.Length;
-                if (row.Height.Length > maxHeight) maxHeight = row.Height.Length;
+                var extendedFrameBounds = Api.GetExtendedFrameBounds(process.MainWindowHandle);
+                builder.Add(process.MainWindowTitle,
+                    extendedFrameBounds.left,
+                    extendedFrameBounds.top,
+                    extendedFrameBounds.right - extendedFrameBounds.left,
+                    extendedFrameBounds.bottom - extendedFrameBounds.top);
             }
 
-            // 以下の式で、最後のひく数を5ではなく4にすると、Windows PowerShell を起動したときに開くウィンドウで実行したときのみ、
-            // 不要な折り返しが発生する（幅ちょうどに収まっているのに折り返しが発生する）。
-            // ジャンプリストでは Windows PowerShell が開くため、これに最適化して引く数を5としている。
-            // また、Console.BufferWidth ではなく Console.WindowWidth を使う。
+            // Console.BufferWidth ではなく Console.WindowWidth を使う。
             // BufferWidth > WindowWidth の場合、横スクロールバーが表示される。
-            int limitTitleWidth = Console.WindowWidth - maxX - maxY - maxWidth - maxHeight - 5;
-            int maxTitleWidth = rows.Where(r => r.TitleWidth <= limitTitleWidth).Max(r => r.TitleWidth);
-
-            foreach (var row in rows)
+            var results = builder.Build(Console.WindowWidth);
+            foreach (var result in results)
             {
-                var titlePadding = maxTitleWidth > row.TitleWidth ? new string(' ', maxTitleWidth - row.TitleWidth) : string.Empty;
-                var xPadding = new string(' ', maxX - row.X.Length);
-                var yPadding = new string(' ', maxY - row.Y.Length);
-                var widthPadding = new string(' ', maxWidth - row.Width.Length);
-                var heightPadding = new string(' ', maxHeight - row.Height.Length);
-
-                Console.WriteLine($"{row.Title}{titlePadding} {xPadding}{row.X} {yPadding}{row.Y} {widthPadding}{row.Width} {heightPadding}{row.Height}");
-            }
-        }
-
-        private class Row
-        {
-            private static readonly Encoding encoding;
-
-            public string Title { get; private set; }
-            public int TitleWidth { get; private set; }
-            public string X { get; private set; }
-            public string Y { get; private set; }
-            public string Width { get; private set; }
-            public string Height { get; private set; }
-
-            static Row()
-            {
-                Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
-                encoding = Encoding.GetEncoding(932);
-            }
-
-            public Row(string title, double x, double y, double width, double height)
-            {
-                Title = title;
-                TitleWidth = encoding.GetByteCount(title);
-                X = x.ToString();
-                Y = y.ToString();
-                Width = width.ToString();
-                Height = height.ToString();
+                Console.WriteLine(result);
             }
         }
     }
