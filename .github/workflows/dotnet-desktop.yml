@@ -80,6 +80,10 @@ jobs:
     # Execute all unit tests in the solution
     - name: Execute unit tests
       run: dotnet test
+      
+    # publish する。
+    - name: Publish
+      run: dotnet publish -p:PublishProfile=FolderProfile
 
     # Restore the application to populate the obj folder with RuntimeIdentifiers
     # - name: Restore the application
