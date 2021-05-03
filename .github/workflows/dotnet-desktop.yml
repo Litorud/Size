@@ -40,20 +40,19 @@ name: .NET Core Desktop
 
 on:
   push:
-    branches: [ master ]
+    branches: [master]
   pull_request:
-    branches: [ master ]
+    branches: [master]
 
 jobs:
-
   build:
-
     # strategy:
     #   matrix:
     #     configuration: [Debug, Release]
 
-    runs-on: windows-latest  # For a list of available runner types, refer to
-                             # https://help.github.com/en/actions/reference/workflow-syntax-for-github-actions#jobsjob_idruns-on
+    runs-on:
+      windows-latest # For a list of available runner types, refer to
+      # https://help.github.com/en/actions/reference/workflow-syntax-for-github-actions#jobsjob_idruns-on
 
     # env:
     #   Solution_Name: your-solution-name                         # Replace with your solution name, i.e. MyWpfApp.sln.
@@ -62,42 +61,43 @@ jobs:
     #   Wap_Project_Path: your-wap-project-path                   # Replace with the path to your Wap project, i.e. MyWpf.App.Package\MyWpfApp.Package.wapproj.
 
     steps:
-    - name: Checkout
-      uses: actions/checkout@v2
-      with:
-        fetch-depth: 0
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
 
-    # Install the .NET Core workload
-    - name: Install .NET Core
-      uses: actions/setup-dotnet@v1
-      with:
-        dotnet-version: 5.0.x
+      # Install the .NET Core workload
+      - name: Install .NET Core
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: 5.0.x
 
-    # Add  MSBuild to the PATH: https://github.com/microsoft/setup-msbuild
-    # - name: Setup MSBuild.exe
-    #   uses: microsoft/setup-msbuild@2008f912f56e61277eefaac6d1888b750582aa16
+      # Add  MSBuild to the PATH: https://github.com/microsoft/setup-msbuild
+      # - name: Setup MSBuild.exe
+      #   uses: microsoft/setup-msbuild@2008f912f56e61277eefaac6d1888b750582aa16
 
-    # Execute all unit tests in the solution
-    - name: Execute unit tests
-      run: dotnet test
+      # Execute all unit tests in the solution
+      - name: Execute unit tests
+        run: dotnet test
 
-    # publish する。
-    - name: Publish
-      run: dotnet publish -p:PublishProfile=FolderProfile Size
+      # publish する。
+      - name: Publish
+        run: dotnet publish -p:PublishProfile=FolderProfile Size
 
-    # 圧縮する。
-    - name: Compress
-      run: Compress-Archive -Path .\README.md,.\Size\bin\Release\net5.0-windows\publish\clrcompression.dll,.\Size\bin\Release\net5.0-windows\publish\clrjit.dll,.\Size\bin\Release\net5.0-windows\publish\coreclr.dll,.\Size\bin\Release\net5.0-windows\publish\D3DCompiler_47_cor3.dll,.\Size\bin\Release\net5.0-windows\publish\mscordaccore.dll,.\Size\bin\Release\net5.0-windows\publish\PenImc_cor3.dll,.\Size\bin\Release\net5.0-windows\publish\PresentationNative_cor3.dll,.\Size\bin\Release\net5.0-windows\publish\Size.exe,.\Size\bin\Release\net5.0-windows\publish\vcruntime140_cor3.dll,.\Size\bin\Release\net5.0-windows\publish\wpfgfx_cor3.dll -DestinationPath Size.zip -Force
+      # 圧縮する。
+      - name: Compress
+        run: Compress-Archive -Path .\README.md,.\Size\bin\Release\net5.0-windows\publish\clrcompression.dll,.\Size\bin\Release\net5.0-windows\publish\clrjit.dll,.\Size\bin\Release\net5.0-windows\publish\coreclr.dll,.\Size\bin\Release\net5.0-windows\publish\D3DCompiler_47_cor3.dll,.\Size\bin\Release\net5.0-windows\publish\mscordaccore.dll,.\Size\bin\Release\net5.0-windows\publish\PenImc_cor3.dll,.\Size\bin\Release\net5.0-windows\publish\PresentationNative_cor3.dll,.\Size\bin\Release\net5.0-windows\publish\Size.exe,.\Size\bin\Release\net5.0-windows\publish\vcruntime140_cor3.dll,.\Size\bin\Release\net5.0-windows\publish\wpfgfx_cor3.dll -DestinationPath Size.zip -Force
 
-    # リリースを作る。
-    - name: Release
-      uses: softprops/action-gh-release@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag_name: v
-        draft: true
-        files: Size.zip
+      # リリースを作る。
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          name: バージョン
+          tag_name: v
+          draft: true
+          files: Size.zip
 
     # Restore the application to populate the obj folder with RuntimeIdentifiers
     # - name: Restore the application
