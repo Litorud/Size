@@ -105,12 +105,12 @@ namespace Size.Tests
                 right = (int)((extendedFrameBounds2.right + 5) * 1.5),  // = (139 + 5) * 1.5 = 216
                 bottom = (int)((extendedFrameBounds2.bottom + 5) * 1.5) // = (138 + 5) * 1.5 = 214.5 ≒ 214
             };
-            var (x4, y4, width4, height4) = calculator4.Calculate(windowRect2, extendedFrameBounds2, 144, 144, 96);
+            var (x4, y4, w4, h4) = calculator4.Calculate(windowRect2, extendedFrameBounds2, 144, 144, 96);
             // DpiForMonitor が 144 と、標準の 96dpi より高いので、144 / 96 = 1.5倍の値を返す必要がある。透明部も1.5倍して考慮する。
-            Assert.AreEqual(-234, x4);        // (-149 - 7.5)       * 1.5 = -234.75 ※0.75のずれがあるのは、extendedFrameBounds2 から windowRect2 を決めたため。
-            Assert.AreEqual(-237.75, y4);     // (-151 - 7.5)       * 1.5 = -237.75
-            Assert.AreEqual(245.25, width4);  // ( 149 + 7.5 + 7.5) * 1.5 =  246    ※〃
-            Assert.AreEqual(248.25, height4); // ( 151 + 7.5 + 7.5) * 1.5 =  249    ※〃
+            Assert.AreEqual(-234, x4);    // (-149 - 7.5)       * 1.5 = -234.75 ※0.75のずれがあるのは、extendedFrameBounds2 から windowRect2 を決めたため。
+            Assert.AreEqual(-237.75, y4); // (-151 - 7.5)       * 1.5 = -237.75
+            Assert.AreEqual(245.25, w4);  // ( 149 + 7.5 + 7.5) * 1.5 =  246    ※〃
+            Assert.AreEqual(248.25, h4);  // ( 151 + 7.5 + 7.5) * 1.5 =  249    ※〃
 
             // 8. DPI が 96 ではない（144の）ディスプレイで、仮想化された DPI に基づく位置とサイズを返すこと。-a の場合は調整すること。
             // PrimaryScreen は (0, 0)、1000×1000。VirtualScreen も同じとする。
@@ -127,12 +127,12 @@ namespace Size.Tests
                 right = extendedFrameBounds2.right + 5,  // = 139 + 5 = 144
                 bottom = extendedFrameBounds2.bottom + 5 // = 138 + 5 = 143
             };
-            var (x5, y5, width5, height5) = calculator4.Calculate(windowRect3, extendedFrameBounds2, 144, 144, 144);
+            var (x5, y5, w5, h5) = calculator4.Calculate(windowRect3, extendedFrameBounds2, 144, 144, 144);
             // DpiForMonitor が 144 と、標準の 96dpi より高いので、タスクバーも1.5倍して考慮する。
-            Assert.AreEqual(-0.5, x5);       // -5 + 3 * 1.5 = -0.5
-            Assert.AreEqual(-5, y5);         // -5 + 0 * 1.5 = -5
-            Assert.AreEqual(238.5, width5);  // (149 + 5 + 5) * 1.5 = 238.5
-            Assert.AreEqual(241.5, height5); // (151 + 5 + 5) * 1.5 = 241.5
+            Assert.AreEqual(-0.5, x5);  // -5 + 3 * 1.5 = -0.5
+            Assert.AreEqual(-5, y5);    // -5 + 0 * 1.5 = -5
+            Assert.AreEqual(238.5, w5); // (149 + 5 + 5) * 1.5 = 238.5
+            Assert.AreEqual(241.5, h5); // (151 + 5 + 5) * 1.5 = 241.5
         }
     }
 }

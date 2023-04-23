@@ -122,8 +122,8 @@ namespace Size
                 var (dpiX, dpiY) = Api.GetDpiForMonitor(monitorHandle);
                 var windowDpi = Api.GetDpiForWindow(process.MainWindowHandle);
 
-                var (x, y, width, height) = calculator.Calculate(windowRect, extendedFrameBounds, dpiX, dpiY, windowDpi);
-                Api.MoveWindow(process.MainWindowHandle, (int)x, (int)y, (int)width, (int)height);
+                var (x, y, w, h) = calculator.Calculate(windowRect, extendedFrameBounds, dpiX, dpiY, windowDpi);
+                Api.MoveWindow(process.MainWindowHandle, (int)x, (int)y, (int)w, (int)h);
             }
         }
 
