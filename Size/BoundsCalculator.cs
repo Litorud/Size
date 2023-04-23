@@ -147,11 +147,11 @@ namespace Size
                 var pX = 0;
                 var pY = 0;
                 var pW = primaryScreenWidth * monitorDpiX / 96;
-                var pH = primaryScreenHeight * monitorDpiX / 96;
+                var pH = primaryScreenHeight * monitorDpiY / 96;
                 var wX = workAreaX * monitorDpiX / 96;
-                var wY = workAreaY * monitorDpiX / 96;
+                var wY = workAreaY * monitorDpiY / 96;
                 var wW = workAreaWidth * monitorDpiX / 96;
-                var wH = workAreaHeight * monitorDpiX / 96;
+                var wH = workAreaHeight * monitorDpiY / 96;
 
                 // PrimaryScreen の X と WorkArea の X が異なるなら、タスクバーは左にある。
                 // X が同じで Width が異なるなら、タスクバーは右にある。
