@@ -83,6 +83,56 @@ namespace Size.Tests
             Assert.AreEqual(11, width3);
             // 上透明部=2、下透明部=2 なので、高さ = 2 + 21 + 2 = 25。
             Assert.AreEqual(25, height3);
+
+            // 7. DPI が 96 ではない（144の）ディスプレイで、仮想化された DPI に基づく位置とサイズを返すこと。
+            // (-149, -151) 149×151 にする。値は、144 以上の素数として選んだ。
+            var calculator4 = new BoundsCalculator(new int[] { -149, -151, 149, 151 });
+            // 現在の透明部を除いたウィンドウは、(0, 1)、139×137 とする。
+            var extendedFrameBounds2 = new Rect
+            {
+                left = 0,
+                top = 1,
+                right = 0 + 139,
+                bottom = 1 + 137
+            };
+            // DpiForMonitor は 144 で、DpiForWindow は 96 とする。
+            // モニターとウィンドウの DPI が異なるので、windowRect は 144 / 96 = 1.5倍 + 透明部を含む値となる。
+            // 透明部は上下左右に 5px とする。これも 1.5倍するので 7.5 となる。
+            var windowRect2 = new Rect
+            {
+                left = (int)((extendedFrameBounds2.left - 5) * 1.5),    // = (  0 - 5) * 1.5 =  -7.5 ≒ -7
+                top = (int)((extendedFrameBounds2.top - 5) * 1.5),      // = (  1 - 5) * 1.5 =  -6
+                right = (int)((extendedFrameBounds2.right + 5) * 1.5),  // = (139 + 5) * 1.5 = 216
+                bottom = (int)((extendedFrameBounds2.bottom + 5) * 1.5) // = (138 + 5) * 1.5 = 214.5 ≒ 214
+            };
+            var (x4, y4, width4, height4) = calculator4.Calculate(windowRect2, extendedFrameBounds2, 144, 144, 96);
+            // DpiForMonitor が 144 と、標準の 96dpi より高いので、144 / 96 = 1.5倍の値を返す必要がある。透明部も1.5倍して考慮する。
+            Assert.AreEqual(-234, x4);        // (-149 - 7.5)       * 1.5 = -234.75 ※0.75のずれがあるのは、extendedFrameBounds2 から windowRect2 を決めたため。
+            Assert.AreEqual(-237.75, y4);     // (-151 - 7.5)       * 1.5 = -237.75
+            Assert.AreEqual(245.25, width4);  // ( 149 + 7.5 + 7.5) * 1.5 =  246    ※〃
+            Assert.AreEqual(248.25, height4); // ( 151 + 7.5 + 7.5) * 1.5 =  249    ※〃
+
+            // 8. DPI が 96 ではない（144の）ディスプレイで、仮想化された DPI に基づく位置とサイズを返すこと。-a の場合は調整すること。
+            // PrimaryScreen は (0, 0)、1000×1000。VirtualScreen も同じとする。
+            // タスクバーは左側に 3px とする。したがって、WorkArea は (3, 0)、997×1000 となる。
+            double pW2 = 1000, pH2 = 1000;
+            double vX2 = 0, vY2 = 0, vW2 = 1000, vH2 = 100;
+            double wX2 = 3, wY2 = 0, wW2 = 997, wH2 = 1000;
+            calculator4.AddAdjustProcess(pW2, pH2, vX2, vY2, vW2, vH2, wX2, wY2, wW2, wH2);
+            // DpiForMonitor は 144 で、DpiForWindow も 144 とする。同じなので1.5倍などは不要。
+            var windowRect3 = new Rect
+            {
+                left = extendedFrameBounds2.left - 5,    // =   0 - 5 =  -5
+                top = extendedFrameBounds2.top - 5,      // =   1 - 5 =  -4
+                right = extendedFrameBounds2.right + 5,  // = 139 + 5 = 144
+                bottom = extendedFrameBounds2.bottom + 5 // = 138 + 5 = 143
+            };
+            var (x5, y5, width5, height5) = calculator4.Calculate(windowRect3, extendedFrameBounds2, 144, 144, 144);
+            // DpiForMonitor が 144 と、標準の 96dpi より高いので、タスクバーも1.5倍して考慮する。
+            Assert.AreEqual(-0.5, x5);       // -5 + 3 * 1.5 = -3
+            Assert.AreEqual(-5, y5);         // -5 + 0 * 1.5 = -5
+            Assert.AreEqual(238.5, width5);  // (149 + 5 + 5) * 1.5 = 238.5
+            Assert.AreEqual(241.5, height5); // (151 + 5 + 5) * 1.5 = 241.5
         }
     }
 }
