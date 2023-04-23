@@ -116,7 +116,7 @@ namespace Size.Tests
             // PrimaryScreen は (0, 0)、1000×1000。VirtualScreen も同じとする。
             // タスクバーは左側に 3px とする。したがって、WorkArea は (3, 0)、997×1000 となる。
             double pW2 = 1000, pH2 = 1000;
-            double vX2 = 0, vY2 = 0, vW2 = 1000, vH2 = 100;
+            double vX2 = 0, vY2 = 0, vW2 = 1000, vH2 = 1000;
             double wX2 = 3, wY2 = 0, wW2 = 997, wH2 = 1000;
             calculator4.AddAdjustProcess(pW2, pH2, vX2, vY2, vW2, vH2, wX2, wY2, wW2, wH2);
             // DpiForMonitor は 144 で、DpiForWindow も 144 とする。同じなので1.5倍などは不要。
@@ -129,7 +129,7 @@ namespace Size.Tests
             };
             var (x5, y5, width5, height5) = calculator4.Calculate(windowRect3, extendedFrameBounds2, 144, 144, 144);
             // DpiForMonitor が 144 と、標準の 96dpi より高いので、タスクバーも1.5倍して考慮する。
-            Assert.AreEqual(-0.5, x5);       // -5 + 3 * 1.5 = -3
+            Assert.AreEqual(-0.5, x5);       // -5 + 3 * 1.5 = -0.5
             Assert.AreEqual(-5, y5);         // -5 + 0 * 1.5 = -5
             Assert.AreEqual(238.5, width5);  // (149 + 5 + 5) * 1.5 = 238.5
             Assert.AreEqual(241.5, height5); // (151 + 5 + 5) * 1.5 = 241.5
