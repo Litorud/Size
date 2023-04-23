@@ -118,8 +118,12 @@ namespace Size
                 // が、めったにないケースなので気にしない。
                 var extendedFrameBounds = Api.GetExtendedFrameBounds(process.MainWindowHandle);
 
-                var (x, y, width, height) = calculator.Calculate(windowRect, extendedFrameBounds);
-                Api.MoveWindow(process.MainWindowHandle, x, y, width, height);
+                var monitorHandle = Api.MonitorFromWindow(process.MainWindowHandle);
+                var (dpiX, dpiY) = Api.GetDpiForMonitor(monitorHandle);
+                var windowDpi = Api.GetDpiForWindow(process.MainWindowHandle);
+
+                var (x, y, width, height) = calculator.Calculate(windowRect, extendedFrameBounds, dpiX, dpiY, windowDpi);
+                Api.MoveWindow(process.MainWindowHandle, (int)x, (int)y, (int)width, (int)height);
             }
         }
 

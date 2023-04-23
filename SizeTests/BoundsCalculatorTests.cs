@@ -29,7 +29,7 @@ namespace Size.Tests
                 right = extendedFrameBounds.right + 2,
                 bottom = extendedFrameBounds.bottom + 2
             };
-            var (x1, y1, width1, height1) = calculator1.Calculate(windowRect, extendedFrameBounds);
+            var (x1, y1, width1, height1) = calculator1.Calculate(windowRect, extendedFrameBounds, 96, 96, 96);
             // 指定X=0、現在X=0、左透明部=0 なので、X=0。
             Assert.AreEqual(0, x1);
             // 指定Y=-1、現在Y=1、上透明部=2 なので、Y = -1 - 2 = -3。
@@ -53,7 +53,7 @@ namespace Size.Tests
             // さらに、右がタスクバーと重なるので、左へずらして (6, 9) になる。
             var calculator2 = new BoundsCalculator(new int[] { 7, 10, 1, 11 });
             calculator2.AddAdjustProcess(pW, pH, vX, vY, vW, vH, wX1, wY1, wW1, wH1);
-            var (x2, y2, width2, height2) = calculator2.Calculate(windowRect, extendedFrameBounds);
+            var (x2, y2, width2, height2) = calculator2.Calculate(windowRect, extendedFrameBounds, 96, 96, 96);
             // 左透明部=0 なので、X = 6 のまま。
             Assert.AreEqual(6, x2);
             // 上透明部=2 なので、Y = 9 - 2 = 7。
@@ -74,7 +74,7 @@ namespace Size.Tests
             // この結果、右がタスクバーと重なり、下がスクリーンからはみ出すが、これは対処しない。
             var calculator3 = new BoundsCalculator(new int[] { 1, 10, 9, 21 });
             calculator3.AddAdjustProcess(pW, pH, vX, vY, vW, vH, wX1, wY1, wW1, wH1);
-            var (x3, y3, width3, height3) = calculator3.Calculate(windowRect, extendedFrameBounds);
+            var (x3, y3, width3, height3) = calculator3.Calculate(windowRect, extendedFrameBounds, 96, 96, 96);
             // 左透明部=0 なので、X = 0 のまま。
             Assert.AreEqual(0, x3);
             // 上透明部=2 なので、Y = 0 - 2 = -2。
