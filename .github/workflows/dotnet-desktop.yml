@@ -86,7 +86,7 @@ jobs:
 
       # 圧縮する。
       - name: Compress
-        run: Compress-Archive -Path .\README.md,.\Size\bin\Release\net5.0-windows\publish\win-x64\PresentationNative_cor3.dll,.\Size\bin\Release\net5.0-windows\publish\win-x64\Size.exe,.\Size\bin\Release\net5.0-windows\publish\win-x64\vcruntime140_cor3.dll -DestinationPath Size.zip -Force
+        run: Compress-Archive -Path .\README.md,.\Size\bin\Release\net7.0-windows\publish\win-x64\PresentationNative_cor3.dll,.\Size\bin\Release\net7.0-windows\publish\win-x64\Size.exe,.\Size\bin\Release\net7.0-windows\publish\win-x64\vcruntime140_cor3.dll -DestinationPath Size.zip -Force
 
       # リリースを作る。
       - name: Release
